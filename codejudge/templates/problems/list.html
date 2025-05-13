@@ -1,0 +1,7 @@
+<h2>Danh sách bài</h2>
+<ul>
+{% for p in problems %}
+  <li><a href="{% url 'problem_detail' p.id %}">{{ p.title }}</a></li>
+{% endfor %}
+</ul>
+<a href="{% url 'create_problem' %}">+ Tạo bài mới</a>
