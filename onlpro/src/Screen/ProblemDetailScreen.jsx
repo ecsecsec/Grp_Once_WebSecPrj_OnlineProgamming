@@ -48,7 +48,7 @@ function ProblemDetailScreen() {
     }
 
     const handleSubmit = async () => {
-        const response = await fetch("./api/submit", {
+        const response = await fetch("https://localhost:5173/api/submit", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -64,9 +64,9 @@ function ProblemDetailScreen() {
     const handleFileImport = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
+
         const maxSize = 5 * 1024 * 1024;
-        if(file.size > maxSize){
+        if (file.size > maxSize) {
             alert("Kích thước file vượt quá giới hạn 5MB!");
             return;
         }
@@ -75,7 +75,7 @@ function ProblemDetailScreen() {
             setCode(event.target.result);
         };
         reader.readAsText(file);
-        
+
     };
     const detectLanguageFromExtension = (filename) => {
         const ext = filename.split('.').pop();
@@ -115,7 +115,7 @@ function ProblemDetailScreen() {
                         />
                     </div>
 
-                    <AceEditor 
+                    <AceEditor
                         mode={language}
                         theme="monokai"
                         name="codeEditor"
@@ -129,7 +129,7 @@ function ProblemDetailScreen() {
                         highlightActiveLine={true}
                         setOptions={{
                             showLineNumbers: true,
-                            tabSize:4,
+                            tabSize: 4,
                         }}
                     />
                     <div style={{ textAlign: 'center', marginTop: '1rem' }}>
