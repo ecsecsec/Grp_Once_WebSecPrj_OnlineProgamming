@@ -47,9 +47,20 @@ function ProblemDetailScreen() {
         return <div className="problem-detail">Không tìm thấy bài tập!</div>;
     }
 
-    const handleSubmit = () => {
-        alert("Loading");
+    const handleSubmit = async () => {
+        const response = await fetch("./api/submit", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ code, language }),
+        });
+
+        const result = await response.json();
+        if (result.output) alert("Output:\n" + result.output);
+        else alert("Lỗi:\n" + result.error);
     };
+
     const handleFileImport = (e) => {
         const file = e.target.files[0];
         if (!file) return;
