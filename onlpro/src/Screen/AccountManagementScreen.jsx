@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './AccountManagement.css';
 
-function AccountManagementScreen() {
+function AccountManagement() {
     const [username, setUsername] = useState('User123');
     const [email, setEmail] = useState('user@example.com');
     const [password, setPassword] = useState('');
@@ -78,4 +78,4 @@ function AccountManagementScreen() {
     );
 }
 
-export default AccountManagementScreen;
+export default AccountManagement;

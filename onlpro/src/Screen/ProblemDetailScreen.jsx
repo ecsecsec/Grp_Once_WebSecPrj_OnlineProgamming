@@ -1,11 +1,18 @@
 import { useParams } from "react-router-dom";
 import './ProblemDetail.css';
 import { useState } from "react";
+import AceEditor from "react-ace";
+import "ace-builds/src-noconflict/theme-monokai";
+import "ace-builds/src-noconflict/mode-python";
+import "ace-builds/src-noconflict/mode-c_cpp";
+import "ace-builds/src-noconflict/mode-java";
+
 
 function ProblemDetailScreen() {
     const { problemId } = useParams();
     const [showEditor, setShowEditor] = useState(false);
     const [code, setCode] = useState('');
+    const [language, setLanguage] = useState('python');
 
     const problems = [
         {
@@ -43,6 +50,32 @@ function ProblemDetailScreen() {
     const handleSubmit = () => {
         alert("Loading");
     };
+    const handleFileImport = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const maxSize = 5 * 1024 * 1024;
+        if(file.size > maxSize){
+            alert("Kích thước file vượt quá giới hạn 5MB!");
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            setCode(event.target.result);
+        };
+        reader.readAsText(file);
+        
+    };
+    const detectLanguageFromExtension = (filename) => {
+        const ext = filename.split('.').pop();
+        switch (ext) {
+            case 'py': return 'python';
+            case 'c':
+            case 'cpp': return 'c_cpp';
+            case 'java': return 'java';
+            default: return 'python'; // mặc định nếu không rõ
+        }
+    };
 
     return (
         <div className="problem-detail">
@@ -55,13 +88,42 @@ function ProblemDetailScreen() {
             <button className="btn-start" onClick={() => setShowEditor(true)}>Làm bài</button>
 
             {showEditor && (
-                <div className="code-editor">
-                    <textarea
-                        placeholder="Nhập code của bạn..."
+                <div className="editor-container">
+                    <div className="editor-header">
+                        <span className="editor-title"><strong>Source code</strong></span>
+                        <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                            <option value="python">Python</option>
+                            <option value="c_cpp">C/ C++</option>
+                            <option value="java">Java</option>
+                        </select>
+                        <input
+                            type="file"
+                            accept=".c,.cpp,.py,.java,.txt"
+                            onChange={handleFileImport}
+                            className="btn-import"
+                        />
+                    </div>
+
+                    <AceEditor 
+                        mode={language}
+                        theme="monokai"
+                        name="codeEditor"
                         value={code}
-                        onChange={(e) => setCode(e.target.value)}
+                        onChange={setCode}
+                        fontSize={14}
+                        width="100%"
+                        height="300px"
+                        showPrintMargin={false}
+                        showGutter={true}
+                        highlightActiveLine={true}
+                        setOptions={{
+                            showLineNumbers: true,
+                            tabSize:4,
+                        }}
                     />
-                    <button className="btn-submit" onClick={handleSubmit}>Nộp bài</button>
+                    <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                        <button className="btn-submit" onClick={handleSubmit}>Submit</button>
+                    </div>
                 </div>
             )}
         </div>

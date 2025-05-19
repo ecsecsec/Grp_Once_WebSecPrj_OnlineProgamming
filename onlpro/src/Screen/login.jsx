@@ -6,7 +6,7 @@ function Login(){
     const [form, setForm] = useState({username: '', password: ''});
 
     const handleChange = e => {
-        setForm({...form, [e.target.name]: e.targer.value});
+        setForm({...form, [e.target.name]: e.target.value});
     };
     const handleSubmit = e => {
         e.preventDefault();
@@ -17,7 +17,7 @@ function Login(){
             <form className="login-form" onSubmit={handleSubmit}>
                 <h2>Đăng nhập</h2>
                 <input 
-                    type="username"
+                    type="text"
                     name="username"
                     placeholder="Tên tài khoản"
                     value={form.username}

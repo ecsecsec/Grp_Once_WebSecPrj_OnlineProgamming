@@ -46,13 +46,14 @@
   background-color: #0056b3;
 }
 
-.login-form p, signup-form p {
+.login-form p, .signup-form p {
   margin-top: 16px;
   text-align: center;
   font-size: 14px;
+  color: #000;
 }
 
-.login-form a, signup-form a {
+.login-form a, .signup-form a {
   color: #007bff;
   text-decoration: none;
 }
