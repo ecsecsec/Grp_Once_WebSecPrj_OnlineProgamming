@@ -1,8 +1,0 @@
-<h2>{{ problem.title }}</h2>
-<p>{{ problem.description }}</p>
-
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Nộp bài</button>
-</form>

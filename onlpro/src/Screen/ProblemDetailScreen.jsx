@@ -74,7 +74,7 @@ function ProblemDetailScreen() {
         reader.onload = (event) => {
             setCode(event.target.result);
         };
-        reader.readAsText(file);
+        reader.readAsText(file); 
         
     };
     const detectLanguageFromExtension = (filename) => {
