@@ -2,8 +2,14 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
+<<<<<<< HEAD
   "main": "index.js",
   "scripts": {
+=======
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+>>>>>>> 77cd3133a0f72d3923070e8d660ecf790a583091
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,5 +20,11 @@
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "express": "^5.1.0"
+<<<<<<< HEAD
+=======
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+>>>>>>> 77cd3133a0f72d3923070e8d660ecf790a583091
   }
 }
