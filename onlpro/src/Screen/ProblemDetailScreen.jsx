@@ -48,7 +48,7 @@ function ProblemDetailScreen() {
     }
 
     const handleSubmit = async () => {
-        const response = await fetch("https://localhost:5173/api/submit", {
+        const response = await fetch("https://localhost:5000/api/submit", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

@@ -9,7 +9,7 @@ function SignUp() {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = e => {
+    const handleSubmit = async e => {
         e.preventDefault();
         if (form.password !== form.confirm) {
             alert("Mật khẩu không khớp!");
@@ -23,9 +23,29 @@ function SignUp() {
             return;
         }
 
-        // Tiến hành đăng ký
-        alert("Đăng ký thành công!");
-        // Xử lý đăng ký tại đây (gửi yêu cầu API, v.v...)
+        try {
+            const res = await fetch("http://localhost:5000/api/signup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: form.username,
+                    email: form.email,
+                    password: form.password
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                alert("✅ Đăng ký thành công!");
+                // Chuyển hướng sang login nếu muốn
+                // navigate("/login");
+            } else {
+                alert("❌ Lỗi: " + data.msg);
+            }
+        } catch (err) {
+            alert("❌ Đăng ký thất bại: " + err.message);
+        }
     };
 
     return (
