@@ -12,19 +12,21 @@ app.use(express.json());
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log('✅ MongoDB connected'))
+.then(() => console.log(' MongoDB connected'))
 .catch(err => console.error('MongoDB connection error:', err));
 
 // Routes
 const helloRoute = require('./routes/hello');
 const loginRoute = require('./routes/login');
 const signupRoute = require('./routes/signup');
+const submitRoute = require('./routes/submit');
 
 app.use('/api/hello', helloRoute);
 app.use('/api/login', loginRoute);
 app.use('/api/signup', signupRoute);
+app.use('/api/submit', submitRoute);
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });

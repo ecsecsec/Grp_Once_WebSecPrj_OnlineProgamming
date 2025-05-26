@@ -13,7 +13,10 @@ function ProblemDetailScreen() {
     const [showEditor, setShowEditor] = useState(false);
     const [code, setCode] = useState('');
     const [language, setLanguage] = useState('python');
+    const [testResult, setTestResult] = useState(null);
 
+
+    //
     const problems = [
         {
             id: 'P001',
@@ -46,9 +49,9 @@ function ProblemDetailScreen() {
     if (!problem) {
         return <div className="problem-detail">Không tìm thấy bài tập!</div>;
     }
-
+    
     const handleSubmit = async () => {
-        const response = await fetch("https://localhost:5000/api/submit", {
+        const response = await fetch("http://localhost:5173/api/submit", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -77,7 +80,6 @@ function ProblemDetailScreen() {
 
         reader.readAsText(file); 
         
-
     };
     const detectLanguageFromExtension = (filename) => {
         const ext = filename.split('.').pop();
@@ -137,6 +139,33 @@ function ProblemDetailScreen() {
                     <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                         <button className="btn-submit" onClick={handleSubmit}>Submit</button>
                     </div>
+                </div>
+            )}
+            {testResult && (
+                <div className="test-result">
+                    <h3>Kết quả test case:</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Input</th>
+                                <th>Expected</th>
+                                <th>Actual</th>
+                                <th>Passed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {testResult.map((test, index) => (
+                                <tr key={index} className={test.passed ? 'pass': 'fail'}>
+                                    <td>{index + 1}</td>
+                                    <td>{test.input}</td>
+                                    <td>{test.expected}</td>
+                                    <td>{test.actual}</td>
+                                    <td>{test.passed ? 'Passed' : 'Failed'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             )}
         </div>

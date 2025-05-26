@@ -13,6 +13,10 @@ import ProblemScreen from './Screen/ProblemScreen'
 import ProblemDetailScreen from './Screen/ProblemDetailScreen'
 import ContestScreen from './Screen/ContestScreen'
 import AccountManagement from './Screen/AccountManagementScreen'
+import ProblemCreateScreen from './Screen/ProblemCreateScreen'
+
+
+
 function App() {
   const [count, setCount] = useState(0)
 
@@ -24,7 +28,8 @@ function App() {
 
         <Route path='/problem' element={<ProblemScreen />}/>
         <Route path='/problem/:problemId' element={<ProblemDetailScreen />}/>
-
+        <Route path='/problem/create' element={<ProblemCreateScreen/>}/>
+        
         <Route path='/contest' element={<ContestScreen />}/>
 
         <Route path='/management' element={<AccountManagement />} />

@@ -29,7 +29,15 @@ function ProblemScreen() {
         },
     ];
     return (
-        <div className="problem-grid">
+        <div>
+            <div className="problem-create">
+                <Link 
+                    to="/problem/create"
+                    className="btn-create">
+                    Tạo bài tập
+                </Link>
+            </div>
+            <div className="problem-grid">
             {problems.map((problem) => (
                 <Link
                     to={`/problem/${problem.id}`}
@@ -46,6 +54,7 @@ function ProblemScreen() {
                     </div>
                 </Link>
             ))}
+        </div>
         </div>
     );
 }

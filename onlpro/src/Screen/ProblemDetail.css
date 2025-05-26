@@ -80,3 +80,44 @@
     color: #000000;
     background-color: #f3f3f3;
 }
+
+.test-results {
+  margin-top: 2rem;
+  font-size: 15px;
+}
+
+.test-results h3 {
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.test-results table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ddd;
+}
+
+.test-results th,
+.test-results td {
+  padding: 10px;
+  border: 1px solid #ccc;
+  text-align: center;
+  background-color: #fff;
+}
+
+.test-results th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+.test-results tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.test-results tr.pass {
+  background-color: #e8fce8;
+}
+
+.test-results tr.fail {
+  background-color: #fdeaea;
+}
