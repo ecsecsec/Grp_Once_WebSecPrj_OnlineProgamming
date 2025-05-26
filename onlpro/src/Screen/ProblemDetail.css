@@ -121,3 +121,54 @@
 .test-results tr.fail {
   background-color: #fdeaea;
 }
+
+.sub-history {
+  margin-top: 2rem;
+  font-size: 15px;
+}
+
+.sub-history h3 {
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.sub-history table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ddd;
+}
+
+.sub-history th,
+.sub-history td {
+  padding: 10px;
+  border: 1px solid #ccc;
+  text-align: center;
+  background-color: #fff;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.sub-history th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+.sub-history tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.sub-history tr.pass {
+  background-color: #e8fce8; 
+}
+
+.sub-history tr.fail {
+  background-color: #fdeaea; 
+}
+
+.sub-history code {
+  display: inline-block;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

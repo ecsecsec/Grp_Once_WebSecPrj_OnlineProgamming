@@ -14,7 +14,7 @@ function ProblemDetailScreen() {
     const [code, setCode] = useState('');
     const [language, setLanguage] = useState('python');
     const [testResult, setTestResult] = useState(null);
-
+    const [subHistory, setSubHistory] = useState([]);
 
     //
     const problems = [
@@ -49,9 +49,9 @@ function ProblemDetailScreen() {
     if (!problem) {
         return <div className="problem-detail">Không tìm thấy bài tập!</div>;
     }
-    
+
     const handleSubmit = async () => {
-        const response = await fetch("http://localhost:5173/api/submit", {
+        const response = await fetch("http://localhost:5000/api/submit", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -60,8 +60,22 @@ function ProblemDetailScreen() {
         });
 
         const result = await response.json();
+
         if (result.output) alert("Output:\n" + result.output);
         else alert("Lỗi:\n" + result.error);
+
+        
+        setSubHistory(prev => [
+            {
+                timestamp: new Date().toLocaleString(),
+                language,
+                codeSnippet: code.substring(0, 50) + (code.length > 50 ? '...' : ''),
+                output: result.output || '',
+                error: result.error || '',
+                passed: !!result.output,
+            },
+            ...prev
+        ]);
     };
 
     const handleFileImport = (e) => {
@@ -78,8 +92,8 @@ function ProblemDetailScreen() {
             setCode(event.target.result);
         };
 
-        reader.readAsText(file); 
-        
+        reader.readAsText(file);
+
     };
     const detectLanguageFromExtension = (filename) => {
         const ext = filename.split('.').pop();
@@ -92,6 +106,7 @@ function ProblemDetailScreen() {
         }
     };
 
+
     return (
         <div className="problem-detail">
             <h2>{problem.title}</h2>
@@ -99,7 +114,33 @@ function ProblemDetailScreen() {
             <p><strong>Dạng bài:</strong> {problem.type}</p>
             <p><strong>Đã giải:</strong> {problem.solvedBy}</p>
             <p>{problem.detail}</p>
-
+            <div className="sub-history" style={{ marginTop: '2rem' }}>
+                <h3>Lịch sử nộp bài</h3>
+                {subHistory.length === 0 ? (
+                    <p>Chưa có lần nộp bài nào.</p>
+                ) : (
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Thời gian</th>
+                                <th>Ngôn ngữ</th>
+                                <th>Code snippet</th>
+                                <th>Kết quả</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {subHistory.map((sub, index) => (
+                                <tr key={index} className={sub.passed ? 'pass' : 'fail'}>
+                                    <td>{sub.timestamp}</td>
+                                    <td>{sub.language}</td>
+                                    <td><code>{sub.codeSnippet}</code></td>
+                                    <td>{sub.passed ? 'Passed' : `Failed (${sub.error || 'Unknown error'})`}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
             <button className="btn-start" onClick={() => setShowEditor(true)}>Làm bài</button>
 
             {showEditor && (
@@ -156,7 +197,7 @@ function ProblemDetailScreen() {
                         </thead>
                         <tbody>
                             {testResult.map((test, index) => (
-                                <tr key={index} className={test.passed ? 'pass': 'fail'}>
+                                <tr key={index} className={test.passed ? 'pass' : 'fail'}>
                                     <td>{index + 1}</td>
                                     <td>{test.input}</td>
                                     <td>{test.expected}</td>
