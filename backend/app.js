@@ -20,11 +20,13 @@ const helloRoute = require('./routes/hello');
 const loginRoute = require('./routes/login');
 const signupRoute = require('./routes/signup');
 const submitRoute = require('./routes/submit');
+const problemRoutes = require('./routes/problem');
 
 app.use('/api/hello', helloRoute);
 app.use('/api/login', loginRoute);
 app.use('/api/signup', signupRoute);
 app.use('/api/submit', submitRoute);
+app.use('/api/problem', problemRoutes);
 
 // Start server
 app.listen(PORT, () => {
