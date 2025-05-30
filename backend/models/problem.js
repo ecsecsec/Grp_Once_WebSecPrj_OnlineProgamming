@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const TestcaseSchema = new mongoose.Schema({
-    input: { type: String, required: true },
+    input: { type: String},
     output: { type: String, required: true },
 });
 
@@ -10,6 +10,7 @@ const ProblemSchema = new mongoose.Schema({
     title: { type: String, required: true },
     type: { type: String },
     detail: { type: String },
+    solvedBy: {type: Number},
     image: { type: String },
     testcases: [TestcaseSchema],
 });

@@ -4,7 +4,7 @@ const router = express.Router();
 const Problem = require('../models/problem');
 
 // Tạo bài tập mới
-router.post('/', async (req, res) => {
+router.post('/create', async (req, res) => {
     try {
         const problem = new Problem(req.body);
         await problem.save();
@@ -16,7 +16,7 @@ router.post('/', async (req, res) => {
 });
 
 // Lấy danh sách tất cả bài tập
-router.get('/', async (req, res) => {
+router.get('/getproblem', async (req, res) => {
     try {
         const problems = await Problem.find();
         res.json(problems);
@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
 });
 
 // Lấy chi tiết một bài tập theo id
-router.get('/:id', async (req, res) => {
+router.get('/getproblem/:id', async (req, res) => {
     try {
         const problem = await Problem.findOne({ id: req.params.id });
         if (!problem) return res.status(404).json({ error: 'Problem not found' });

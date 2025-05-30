@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import './ProblemDetail.css';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AceEditor from "react-ace";
 import "ace-builds/src-noconflict/theme-monokai";
 import "ace-builds/src-noconflict/mode-python";
@@ -10,45 +10,40 @@ import "ace-builds/src-noconflict/mode-java";
 
 function ProblemDetailScreen() {
     const { problemId } = useParams();
+    const [problem, setProblem] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
     const [showEditor, setShowEditor] = useState(false);
     const [code, setCode] = useState('');
     const [language, setLanguage] = useState('python');
     const [testResult, setTestResult] = useState(null);
     const [subHistory, setSubHistory] = useState([]);
+    useEffect(() => {
+        const fetchProblem = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`http://localhost:5000/api/problem/getproblem/${problemId}`);
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status}`);
+                }
+                const data = await response.json();
+                setProblem(data);
+                setError(null);
+            } catch (err) {
+                setError(err.message);
+                setProblem(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProblem();
+    }, [problemId]);
 
-    //
-    const problems = [
-        {
-            id: 'P001',
-            title: 'Tính tổng dãy số',
-            type: 'Toán cơ bản',
-            solvedBy: 125,
-            image: 'https://via.placeholder.com/300x180?text=Problem+1',
-            detail: 'Hãy tính tổng các số từ 1 đến N.',
-        },
-        {
-            id: 'P002',
-            title: 'Tìm số nguyên tố',
-            type: 'Số học',
-            solvedBy: 98,
-            image: 'https://via.placeholder.com/300x180?text=Problem+2',
-            detail: 'Kiểm tra xem một số có phải nguyên tố hay không.',
-        },
-        {
-            id: 'P003',
-            title: 'Sắp xếp mảng',
-            type: 'Thuật toán',
-            solvedBy: 110,
-            image: 'https://via.placeholder.com/300x180?text=Problem+3',
-            detail: 'Sắp xếp một mảng số nguyên tăng dần.',
-        },
-    ];
+    if (loading) return <div>Đang tải bài tập...</div>;
+    if (error) return <div>Lỗi khi tải bài tập: {error}</div>;
+    if (!problem) return <div>Không tìm thấy bài tập!</div>;
 
-    const problem = problems.find(p => p.id === problemId);
-
-    if (!problem) {
-        return <div className="problem-detail">Không tìm thấy bài tập!</div>;
-    }
 
     const handleSubmit = async () => {
         const response = await fetch("http://localhost:5000/api/submit", {
@@ -64,7 +59,7 @@ function ProblemDetailScreen() {
         if (result.output) alert("Output:\n" + result.output);
         else alert("Lỗi:\n" + result.error);
 
-        
+
         setSubHistory(prev => [
             {
                 timestamp: new Date().toLocaleString(),

@@ -8,6 +8,7 @@ function ProblemCreateScreen() {
         title: '',
         type: '',
         detail: '',
+        solvedBy:0,
         image: '',
         testcases: [
             { input: '', output: '' }
@@ -39,12 +40,31 @@ function ProblemCreateScreen() {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("New Problem:", formData);
-        // TODO: gửi lên server / cập nhật local state
-        alert("Đã tạo bài tập thành công!");
-        navigate('/problem');
+
+        try {
+            const response = await fetch('http://localhost:5000/api/problem/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create problem');
+            }
+
+            const result = await response.json();
+            console.log("Created Problem:", result);
+            alert("Đã tạo bài tập thành công!");
+            navigate('/problem');
+
+        } catch (error) {
+            console.error("Error submitting problem:", error);
+            alert(`Lỗi khi tạo bài tập: ${error.message}`);
+        }
     };
 
     return (

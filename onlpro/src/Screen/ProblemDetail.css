@@ -103,10 +103,10 @@
   border: 1px solid #ccc;
   text-align: center;
   background-color: #fff;
+  color: #000000;
 }
 
 .test-results th {
-  background-color: #f0f0f0;
   font-weight: bold;
 }
 
@@ -144,6 +144,7 @@
   border: 1px solid #ccc;
   text-align: center;
   background-color: #fff;
+  color: #000000;
   font-family: monospace;
   font-size: 14px;
 }
