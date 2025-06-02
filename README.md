@@ -23,4 +23,4 @@ quản lý bài tập:
 
 thay đổi mk, thông tin người dùng
 
-[https://drawsql.app/teams/none-3464/diagrams/web-competitive-programming](database)
+[database](https://drawsql.app/teams/none-3464/diagrams/web-competitive-programming)
