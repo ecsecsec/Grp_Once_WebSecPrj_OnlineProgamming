@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 // Đăng ký tài khoản mới
 router.post('/', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     // Kiểm tra user đã tồn tại chưa
     const existingUser = await User.findOne({ email });
@@ -23,6 +23,7 @@ router.post('/', async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      role: role || 'user',
     });
 
     await newUser.save();

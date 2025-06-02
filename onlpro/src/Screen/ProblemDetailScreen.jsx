@@ -51,7 +51,7 @@ function ProblemDetailScreen() {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ code, language }),
+            body: JSON.stringify({ code, language, problemId, }),
         });
 
         const result = await response.json();
