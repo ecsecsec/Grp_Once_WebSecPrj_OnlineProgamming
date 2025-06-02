@@ -10,7 +10,7 @@ function ProblemScreen() {
     useEffect(() => {
         async function fetchProblems() {
             try {
-                const res = await fetch('http://localhost:5000/api/problem/getproblem'); 
+                const res = await fetch('http://localhost:5000/api/problem/getall'); 
                 if (!res.ok) {
                     throw new Error(`HTTP error! status: ${res.status}`);
                 }

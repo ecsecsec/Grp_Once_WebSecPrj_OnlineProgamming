@@ -31,14 +31,16 @@ router.post('/', async (req, res) => {
         for (const [index, testCase] of testcases.entries()) {
             const input = testCase.input;
             const expectedOutput = (testCase.expectedOutput || '').trim(); // Trim whitespace
-
+            
+            console.log(expectedOutput);
             // Gọi hàm thực thi code trong Docker
             // runInDocker sẽ trả về { stdout, stderr, exitCode, timeTaken, memoryUsed }
             const executionResult = await runInDocker(code, language, input);
-
+            
             let passed = false;
             let actualOutput = (executionResult.stdout || '').trim(); // Trim whitespace
-
+            console.log(actualOutput);
+            
             let status = 'Error'; // Default status
 
             if (executionResult.stderr) {
@@ -84,7 +86,7 @@ router.post('/', async (req, res) => {
                 // break;
             }
         }
-
+        console.log("Full Test Results:", JSON.stringify(results, null, 2));
         res.status(200).json({
             overallStatus: allTestsPassed ? 'Accepted' : 'Failed',
             testResults: results,

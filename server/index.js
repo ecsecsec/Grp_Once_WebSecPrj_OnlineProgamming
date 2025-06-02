@@ -11,7 +11,7 @@ const PORT = 3001;
 app.use(cors());
 app.use(bodyParser.json());
 
-app.post('/submit', async (req, res) => {
+app.post('/', async (req, res) => {
     const { code, language } = req.body;
     const filename = `Main_${Date.now()}`;
     const tempDir = './tmp';

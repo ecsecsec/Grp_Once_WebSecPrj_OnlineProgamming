@@ -250,7 +250,7 @@ function ProblemDetailScreen() {
                                 <th>#</th>
                                 <th>Input</th>
                                 <th>Expected Output</th>
-                                <th>Your Output</th> {/* Thêm cột này */}
+                                <th>Your Output</th> 
                                 <th>Status</th>
                                 <th>Time (s)</th>
                                 <th>Memory (MB)</th>
@@ -262,7 +262,7 @@ function ProblemDetailScreen() {
                                     <td>{test.testCase}</td>
                                     <td><pre>{test.input}</pre></td>
                                     <td><pre>{test.expectedOutput}</pre></td>
-                                    <td><pre>{test.actualOutput}</pre></td> {/* Bỏ comment để hiển thị */}
+                                    <td><pre>{test.actualOutput}</pre></td> 
                                     <td>{test.status}</td>
                                     <td>{test.time}</td>
                                     <td>{test.memory}</td>

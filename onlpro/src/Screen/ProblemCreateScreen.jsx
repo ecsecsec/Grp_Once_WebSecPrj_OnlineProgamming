@@ -11,7 +11,7 @@ function ProblemCreateScreen() {
         solvedBy:0,
         image: '',
         testcases: [
-            { input: '', output: '' }
+            { input: '', expectedOutput: '' }
         ],
     });
 
@@ -30,7 +30,7 @@ function ProblemCreateScreen() {
 
     const addTestcase = () => {
         if (formData.testcases.length < 5) {
-            setFormData({ ...formData, testcases: [...formData.testcases, { input: '', output: '' }] });
+            setFormData({ ...formData, testcases: [...formData.testcases, { input: '', expectedOutput: '' }] });
         }
     };
     const removeTestcase = (index) => {
@@ -94,14 +94,13 @@ function ProblemCreateScreen() {
                             rows={2}
                             value={tc.input}
                             onChange={(e) => handleTestcaseChange(index, 'input', e.target.value)}
-                            required
                         />
 
                         <label>Output #{index + 1}</label>
                         <textarea
                             rows={2}
-                            value={tc.output}
-                            onChange={(e) => handleTestcaseChange(index, 'output', e.target.value)}
+                            value={tc.expectedOutput}
+                            onChange={(e) => handleTestcaseChange(index, 'expectedOutput', e.target.value)}
                             required
                         />
 
