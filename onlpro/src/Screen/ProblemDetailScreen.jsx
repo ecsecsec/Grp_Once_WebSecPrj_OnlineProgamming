@@ -17,8 +17,13 @@ function ProblemDetailScreen() {
     const [showEditor, setShowEditor] = useState(false);
     const [code, setCode] = useState('');
     const [language, setLanguage] = useState('python');
-    const [testResult, setTestResult] = useState(null);
+
+    // Sửa lỗi: Khai báo đúng tên state
+    const [submissionStatus, setSubmissionStatus] = useState(null); // Trạng thái tổng thể: Accepted, Failed, Running...
+    const [testResults, setTestResults] = useState([]); // Kết quả chi tiết từng test case
+
     const [subHistory, setSubHistory] = useState([]);
+
     useEffect(() => {
         const fetchProblem = async () => {
             try {
@@ -46,31 +51,55 @@ function ProblemDetailScreen() {
 
 
     const handleSubmit = async () => {
-        const response = await fetch("http://localhost:5000/api/submit", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ code, language, problemId, }),
-        });
+        setSubmissionStatus('Running...');
+        setTestResults([]); // Xóa kết quả cũ trước khi submit mới
 
-        const result = await response.json();
+        try {
+            const response = await fetch("http://localhost:5000/api/submit", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ code, language, problemId }),
+            });
 
-        if (result.output) alert("Output:\n" + result.output);
-        else alert("Lỗi:\n" + result.error);
+            const result = await response.json();
+
+            setSubmissionStatus(result.overallStatus); // Cập nhật trạng thái tổng thể
+            setTestResults(result.testResults || []); // Cập nhật kết quả chi tiết từng test case
+
+            // Xóa các alert không cần thiết, thông tin đã hiển thị trong bảng testResults
+            // if (result.output) alert("Output:\n" + result.output);
+            // else alert("Lỗi:\n" + result.error);
 
 
-        setSubHistory(prev => [
-            {
-                timestamp: new Date().toLocaleString(),
-                language,
-                codeSnippet: code.substring(0, 50) + (code.length > 50 ? '...' : ''),
-                output: result.output || '',
-                error: result.error || '',
-                passed: !!result.output,
-            },
-            ...prev
-        ]);
+            setSubHistory(prev => [
+                {
+                    timestamp: new Date().toLocaleString(),
+                    language,
+                    codeSnippet: code.substring(0, 50) + (code.length > 50 ? '...' : ''),
+                    overallStatus: result.overallStatus,
+                    message: result.message,
+                    // Nếu bạn muốn lưu trữ testResults chi tiết trong lịch sử, hãy thêm vào đây
+                    // testResults: result.testResults,
+                },
+                ...prev
+            ]);
+        } catch (err) {
+            console.error("Submission failed:", err);
+            setSubmissionStatus('Error: ' + err.message);
+            setTestResults([]); // Đảm bảo clear kết quả nếu có lỗi
+            setSubHistory(prev => [
+                {
+                    timestamp: new Date().toLocaleString(),
+                    language,
+                    codeSnippet: code.substring(0, 50) + (code.length > 50 ? '...' : ''),
+                    overallStatus: 'Error',
+                    message: `Lỗi kết nối hoặc xử lý: ${err.message}`,
+                },
+                ...prev
+            ]);
+        }
     };
 
     const handleFileImport = (e) => {
@@ -85,11 +114,14 @@ function ProblemDetailScreen() {
         const reader = new FileReader();
         reader.onload = (event) => {
             setCode(event.target.result);
+            // Tự động phát hiện ngôn ngữ khi import file
+            setLanguage(detectLanguageFromExtension(file.name));
         };
 
         reader.readAsText(file);
 
     };
+
     const detectLanguageFromExtension = (filename) => {
         const ext = filename.split('.').pop();
         switch (ext) {
@@ -105,10 +137,30 @@ function ProblemDetailScreen() {
     return (
         <div className="problem-detail">
             <h2>{problem.title}</h2>
+            {/* Sử dụng problem.id nếu bạn đã cấu hình backend trả về trường này */}
+            {/* Hoặc sử dụng problem._id nếu bạn dùng ID mặc định của MongoDB */}
             <p><strong>Mã:</strong> {problem.id}</p>
             <p><strong>Dạng bài:</strong> {problem.type}</p>
             <p><strong>Đã giải:</strong> {problem.solvedBy}</p>
             <p>{problem.detail}</p>
+
+            {/* Hiển thị test case mẫu nếu có */}
+            <div className="sample-test-cases" style={{ marginTop: '1rem', border: '1px solid #ccc', padding: '1rem' }}>
+                <h3>Ví dụ test case</h3>
+                {problem.testcases && problem.testcases.filter(tc => tc.isSample).map((sample, index) => (
+                    <div key={index} style={{ marginBottom: '1rem' }}>
+                        <h4>Ví dụ {index + 1}</h4>
+                        <p><strong>Input:</strong></p>
+                        <pre>{sample.input}</pre>
+                        <p><strong>Output mong đợi:</strong></p>
+                        <pre>{sample.expectedOutput}</pre>
+                    </div>
+                ))}
+                {(!problem.testcases || problem.testcases.filter(tc => tc.isSample).length === 0) && (
+                    <p>Không có ví dụ test case nào.</p>
+                )}
+            </div>
+
             <div className="sub-history" style={{ marginTop: '2rem' }}>
                 <h3>Lịch sử nộp bài</h3>
                 {subHistory.length === 0 ? (
@@ -120,22 +172,25 @@ function ProblemDetailScreen() {
                                 <th>Thời gian</th>
                                 <th>Ngôn ngữ</th>
                                 <th>Code snippet</th>
-                                <th>Kết quả</th>
+                                <th>Trạng thái tổng thể</th>
+                                <th>Thông báo</th>
                             </tr>
                         </thead>
                         <tbody>
                             {subHistory.map((sub, index) => (
-                                <tr key={index} className={sub.passed ? 'pass' : 'fail'}>
+                                <tr key={index} className={sub.overallStatus === 'Accepted' ? 'pass' : 'fail'}>
                                     <td>{sub.timestamp}</td>
                                     <td>{sub.language}</td>
                                     <td><code>{sub.codeSnippet}</code></td>
-                                    <td>{sub.passed ? 'Passed' : `Failed (${sub.error || 'Unknown error'})`}</td>
+                                    <td>{sub.overallStatus}</td>
+                                    <td>{sub.message}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 )}
             </div>
+
             <button className="btn-start" onClick={() => setShowEditor(true)}>Làm bài</button>
 
             {showEditor && (
@@ -173,31 +228,44 @@ function ProblemDetailScreen() {
                         }}
                     />
                     <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                        <button className="btn-submit" onClick={handleSubmit}>Submit</button>
+                        <button
+                            className="btn-submit"
+                            onClick={handleSubmit}
+                            // Sửa lỗi: Dùng biến `submissionStatus` để kiểm tra điều kiện
+                            disabled={submissionStatus === 'Running...'}
+                        >
+                            {submissionStatus === 'Running...' ? 'Đang chấm điểm...' : 'Submit'}
+                        </button>
                     </div>
                 </div>
             )}
-            {testResult && (
-                <div className="test-result">
-                    <h3>Kết quả test case:</h3>
+
+            {/* Hiển thị kết quả chấm điểm chi tiết */}
+            {testResults.length > 0 && ( // Kiểm tra testResults chứ không phải testResult
+                <div className="test-result" style={{ marginTop: '2rem' }}>
+                    <h3>Kết quả chấm điểm: <span className={submissionStatus === 'Accepted' ? 'pass' : 'fail'}>{submissionStatus}</span></h3>
                     <table>
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Input</th>
-                                <th>Expected</th>
-                                <th>Actual</th>
-                                <th>Passed</th>
+                                <th>Expected Output</th>
+                                <th>Your Output</th> {/* Thêm cột này */}
+                                <th>Status</th>
+                                <th>Time (s)</th>
+                                <th>Memory (MB)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {testResult.map((test, index) => (
+                            {testResults.map((test, index) => (
                                 <tr key={index} className={test.passed ? 'pass' : 'fail'}>
-                                    <td>{index + 1}</td>
-                                    <td>{test.input}</td>
-                                    <td>{test.expected}</td>
-                                    <td>{test.actual}</td>
-                                    <td>{test.passed ? 'Passed' : 'Failed'}</td>
+                                    <td>{test.testCase}</td>
+                                    <td><pre>{test.input}</pre></td>
+                                    <td><pre>{test.expectedOutput}</pre></td>
+                                    <td><pre>{test.actualOutput}</pre></td> {/* Bỏ comment để hiển thị */}
+                                    <td>{test.status}</td>
+                                    <td>{test.time}</td>
+                                    <td>{test.memory}</td>
                                 </tr>
                             ))}
                         </tbody>
