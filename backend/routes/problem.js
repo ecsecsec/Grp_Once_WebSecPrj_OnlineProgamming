@@ -10,7 +10,7 @@ const Problem = require('../models/problem'); // Đảm bảo đường dẫn đ
 // Yêu cầu: body { id, title, type, detail, solvedBy, testcases }
 router.post('/create', async (req, res) => {
     try {
-        const { id, title, type, detail, solvedBy, testcases } = req.body;
+        const { id, title, type, detail, solvedBy, creatorId, testcases } = req.body;
 
         // Kiểm tra xem ID bài tập đã tồn tại chưa
         const existingProblem = await Problem.findOne({ id: id });
@@ -25,6 +25,7 @@ router.post('/create', async (req, res) => {
             type,
             detail,
             solvedBy: solvedBy || 0, // Mặc định là 0 nếu không được cung cấp
+            creatorId,
             testcases: testcases || [] // Mặc định là mảng rỗng nếu không được cung cấp
         });
 
@@ -81,4 +82,26 @@ router.get('/getproblem/:problemId', async (req, res) => {
     }
 });
 
+router.get('/byCreator/:creatorId', async (req, res) => {
+    try {
+        const { creatorId } = req.params; // Lấy creatorId từ URL parameters
+
+        // Kiểm tra xem creatorId có hợp lệ không (tùy thuộc vào định dạng creatorId của bạn)
+        // Ví dụ: nếu creatorId là ObjectId, bạn có thể kiểm tra:
+        // if (!mongoose.Types.ObjectId.isValid(creatorId)) {
+        //     return res.status(400).json({ message: 'Invalid Creator ID format.' });
+        // }
+
+        // Tìm tất cả các bài tập có creatorId khớp
+        // Lọc các trường tương tự như getall
+        const problems = await Problem.find({ creatorId: creatorId }, 'id title type solvedBy creatorId');
+
+        // Nếu không tìm thấy bài tập nào cho creatorId này, trả về mảng rỗng (không phải 404)
+        // Vì có thể creatorId hợp lệ nhưng chưa tạo bài tập nào
+        res.status(200).json(problems);
+    } catch (error) {
+        console.error('Error fetching problems by creator:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
 module.exports = router;

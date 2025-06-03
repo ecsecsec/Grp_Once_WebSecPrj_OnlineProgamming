@@ -11,7 +11,7 @@ const ProblemSchema = new mongoose.Schema({
     type: { type: String },
     detail: { type: String },
     solvedBy: {type: Number, default: 0},
-    image: { type: String },
+    creatorId: {type: String, required: true},
     testcases: [TestcaseSchema],
 });
 

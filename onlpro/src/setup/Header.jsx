@@ -16,6 +16,8 @@ function Header() {
                     <NavLink to="/problem" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => setMenuOpen(false)}>Bài tập</NavLink>
                     <NavLink to="/contest" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => setMenuOpen(false)}>Kỳ thi</NavLink>
                     <NavLink to="/management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => setMenuOpen(false)}>Hỏi & Đáp</NavLink>
+                    <NavLink to="/byCreator" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => setMenuOpen(false)}>Bài tập đã tạo</NavLink>
+                     <NavLink to="/admin" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => setMenuOpen(false)}>Quản lý người dùng</NavLink>
                 </nav>
             </div>
 

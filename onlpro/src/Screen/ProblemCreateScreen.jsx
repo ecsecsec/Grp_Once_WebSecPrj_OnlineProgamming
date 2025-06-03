@@ -3,17 +3,24 @@ import { useNavigate } from "react-router-dom";
 import './ProblemCreate.css';
 
 function ProblemCreateScreen() {
+    // const creatorIdTemp = "";
     const [formData, setFormData] = useState({
         id: '',
         title: '',
         type: '',
         detail: '',
         solvedBy:0,
-        image: '',
+        creatorId: '', //thay ''bằng creator id
         testcases: [
             { input: '', expectedOutput: '' }
         ],
     });
+    // Nếu bạn lấy creatorId từ AuthContext, bạn có thể cần useEffect để cập nhật formData khi user thay đổi
+    // useEffect(() => {
+    //     if (creatorIdFromAuth) {
+    //         setFormData(prevData => ({ ...prevData, creatorId: creatorIdFromAuth }));
+    //     }
+    // }, [creatorIdFromAuth]);
 
     const navigate = useNavigate();
 

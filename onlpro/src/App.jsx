@@ -14,7 +14,8 @@ import ProblemDetailScreen from './Screen/ProblemDetailScreen'
 import ContestScreen from './Screen/ContestScreen'
 import AccountManagement from './Screen/AccountManagementScreen'
 import ProblemCreateScreen from './Screen/ProblemCreateScreen'
-
+import CreatorScreen from './Screen/CreatorScreen'
+import AdminScreen from './Screen/AdminScreen'
 
 
 function App() {
@@ -32,7 +33,12 @@ function App() {
         
         <Route path='/contest' element={<ContestScreen />}/>
 
+        <Route path='/byCreator' element= {<CreatorScreen/>} />
+
         <Route path='/management' element={<AccountManagement />} />
+        
+        <Route path='/admin' element = {<AdminScreen />} />
+        
         <Route path='/login' element={<Login/>} />
         <Route path='/signup' element={<SignUp/>}/>
       </Routes>
