@@ -1,17 +1,26 @@
-const { AbilityBuilder, Ability } = require('@casl/ability');
+// backend/utils/ability.js (Ví dụ)
+const { AbilityBuilder, createMongoAbility } = require('@casl/ability');
 
-function defineAbilitiesFor(role) {
-  const { can, cannot, build } = new AbilityBuilder(Ability);
+function defineAbilityForUser(user) {
+    const { can, cannot, build } = new AbilityBuilder(createMongoAbility);
 
-  if (role === 'admin') {
-    can('manage', 'all'); // toàn quyền
-  } else if (role === 'user') {
-    can('read', 'Post');
-    can('create', 'Comment');
-    cannot('delete', 'Post');
-  }
+    can('read', 'Problem'); // Mọi người đều có thể đọc Problem
 
-  return build();
+    if (user) {
+        can('create', 'Submission');
+        can('read', 'User', { _id: user.id });
+        can('update', 'User', { _id: user.id });
+
+        if (user.role === 'admin') {
+            can('manage', 'all'); 
+        } else if (user.role === 'creator') { 
+            can('create', 'Problem'); 
+            // Creator chỉ có thể update/delete Problem nếu creatorId của problem khớp với _id của họ
+            can('update', 'Problem', { creatorId: user.id }); 
+            can('delete', 'Problem', { creatorId: user.id }); 
+        }
+    }
+    return build();
 }
 
-module.exports = defineAbilitiesFor;
+module.exports = { defineAbilityForUser };

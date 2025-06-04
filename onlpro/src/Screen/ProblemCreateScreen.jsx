@@ -1,33 +1,47 @@
-import { useState } from "react";
+// frontend/src/Screen/ProblemCreateScreen.jsx
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import './ProblemCreate.css';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth hook
 
 function ProblemCreateScreen() {
-    // const creatorIdTemp = "";
+    const { user, isAuthenticated, loading, ability } = useAuth(); // Lấy thông tin user và trạng thái xác thực từ AuthContext
+    const navigate = useNavigate();
+
     const [formData, setFormData] = useState({
-        id: '',
+        id: '', // Đây là trường 'id' tùy chỉnh của bạn
         title: '',
         type: '',
         detail: '',
-        solvedBy:0,
-        creatorId: '', //thay ''bằng creator id
+        solvedBy: 0,
+        creatorId: '', // Sẽ được điền từ user.id của AuthContext
         testcases: [
             { input: '', expectedOutput: '' }
         ],
     });
-    // Nếu bạn lấy creatorId từ AuthContext, bạn có thể cần useEffect để cập nhật formData khi user thay đổi
-    // useEffect(() => {
-    //     if (creatorIdFromAuth) {
-    //         setFormData(prevData => ({ ...prevData, creatorId: creatorIdFromAuth }));
-    //     }
-    // }, [creatorIdFromAuth]);
 
-    const navigate = useNavigate();
+    // Sử dụng useEffect để cập nhật creatorId vào formData khi user (từ AuthContext) thay đổi
+    useEffect(() => {
+        // console.log("ProblemCreateScreen useEffect: user", user);
+        // console.log("ProblemCreateScreen useEffect: isAuthenticated", isAuthenticated);
+        // console.log("ProblemCreateScreen useEffect: loading", loading);
+
+        // Chờ AuthContext load xong và có thông tin user
+        if (!loading) {
+            if (isAuthenticated && user && user.id) {
+                setFormData(prevData => ({ ...prevData, creatorId: user.id }));
+            } else {
+                // Nếu không xác thực hoặc không phải creator, chuyển hướng
+                // console.log("User not authenticated or not a creator, redirecting.");
+                alert("Bạn cần đăng nhập với vai trò creator để tạo bài tập.");
+                navigate('/login'); // Chuyển hướng về trang đăng nhập
+            }
+        }
+    }, [user, isAuthenticated, loading, navigate]); // Dependencies cho useEffect
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
-
 
     const handleTestcaseChange = (index, field, value) => {
         const newTestcases = [...formData.testcases];
@@ -36,12 +50,12 @@ function ProblemCreateScreen() {
     };
 
     const addTestcase = () => {
-        if (formData.testcases.length < 5) {
+        if (formData.testcases.length < 5) { // Giới hạn 5 testcase
             setFormData({ ...formData, testcases: [...formData.testcases, { input: '', expectedOutput: '' }] });
         }
     };
     const removeTestcase = (index) => {
-        if (formData.testcases.length > 1) {
+        if (formData.testcases.length > 1) { // Luôn giữ ít nhất 1 testcase
             const newTestcases = formData.testcases.filter((_, i) => i !== index);
             setFormData({ ...formData, testcases: newTestcases });
         }
@@ -50,36 +64,83 @@ function ProblemCreateScreen() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Kiểm tra quyền trước khi gửi
+        if (!isAuthenticated || !user || !ability.can('create', 'Problem')) {
+            alert("Bạn không có quyền tạo bài tập.");
+            return;
+        }
+        
+        // Kiểm tra creatorId đã được điền chưa (được điền bởi useEffect)
+        if (!formData.creatorId) {
+            alert("Creator ID không có sẵn. Vui lòng đăng nhập lại và thử.");
+            return;
+        }
+
+        // Kiểm tra xem trường 'id' tùy chỉnh có được điền hay không
+        if (!formData.id.trim()) { // .trim() để loại bỏ khoảng trắng thừa
+            alert("Mã bài tập (ID) là bắt buộc và không được để trống.");
+            return;
+        }
+
         try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error("Người dùng chưa được xác thực. Vui lòng đăng nhập.");
+            }
+
+            console.log("Dữ liệu gửi đi (trước khi gửi):", formData); // Log để kiểm tra
+
             const response = await fetch('http://localhost:5000/api/problem/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // THÊM AUTHORIZATION HEADER Ở ĐÂY
                 },
                 body: JSON.stringify(formData),
             });
+
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to create problem');
+                throw new Error(errorData.message || errorData.error || 'Failed to create problem');
             }
 
             const result = await response.json();
             console.log("Created Problem:", result);
             alert("Đã tạo bài tập thành công!");
-            navigate('/problem');
-
+            navigate('/byCreator'); // Chuyển hướng về trang bài tập đã tạo của creator
         } catch (error) {
             console.error("Error submitting problem:", error);
             alert(`Lỗi khi tạo bài tập: ${error.message}`);
         }
     };
 
+    // Hiển thị loading nếu AuthContext đang loading
+    if (loading) {
+        return <div className="loading-container">Đang tải...</div>;
+    }
+
+    // Hiển thị thông báo nếu không có quyền
+    if (!isAuthenticated || !user || !ability.can('create', 'Problem')) {
+        return (
+            <div className="unauthorized-container">
+                <h2>Truy cập bị từ chối</h2>
+                <p>Bạn không có quyền truy cập trang này. Vui lòng đăng nhập với vai trò Creator.</p>
+                <button onClick={() => navigate('/login')}>Đăng nhập</button>
+            </div>
+        );
+    }
+
     return (
         <div className="create-problem-container">
             <h2>Tạo bài tập mới</h2>
             <form className="problem-form" onSubmit={handleSubmit}>
                 <label>Mã bài tập</label>
-                <input name="id" value={formData.id} onChange={handleChange} required />
+                <input
+                    name="id"
+                    value={formData.id}
+                    onChange={handleChange}
+                    required // Đảm bảo người dùng phải nhập
+                />
 
                 <label>Tiêu đề</label>
                 <input name="title" value={formData.title} onChange={handleChange} required />
@@ -90,7 +151,8 @@ function ProblemCreateScreen() {
                 <label>Mô tả chi tiết</label>
                 <textarea name="detail" value={formData.detail} onChange={handleChange} />
 
-                <label>Link ảnh (tuỳ chọn)</label>
+                {/* Thêm trường image nếu schema của bạn có nó */}
+                <label>Link ảnh (tùy chọn)</label>
                 <input name="image" value={formData.image} onChange={handleChange} />
 
                 <h3>Testcases</h3>

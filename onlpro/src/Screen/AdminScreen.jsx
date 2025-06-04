@@ -83,7 +83,7 @@ function AdminScreen() {
                     onClick={() => handleGrantCreator(user._id)}
                     disabled={user.role === "creator"}
                   >
-                    {user.role === "creator" ? "Đã là Creator" : "Cấp quyền Creator"}
+                    {user.role === "creator" ? "Sửa quyền" : "Cấp quyền"} 
                   </button>
                   <button
                     className="btn-delete"

@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@casl/ability": "^6.7.3",
     "ace-builds": "^1.41.0",
+    "axios": "^1.9.0",
     "react": "^19.1.0",
     "react-ace": "^14.0.1",
     "react-dom": "^19.1.0",

@@ -17,14 +17,12 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Routes
 const helloRoute = require('./routes/hello');
-const loginRoute = require('./routes/login');
-const signupRoute = require('./routes/signup');
+const authRoute = require('./routes/auth');
 const submitRoute = require('./routes/submit');
 const problemRoutes = require('./routes/problem');
 
 app.use('/api/hello', helloRoute);
-app.use('/api/login', loginRoute);
-app.use('/api/signup', signupRoute);
+app.use('/api/auth', authRoute);
 app.use('/api/submit', submitRoute);
 app.use('/api/problem', problemRoutes);
 
