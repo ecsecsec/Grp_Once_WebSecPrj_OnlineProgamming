@@ -1,4 +1,4 @@
-// backend/models/User.js
+// backend/models/user.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs'); // <--- Đảm bảo có dòng này!
 
@@ -28,4 +28,4 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model.User || mongoose.model('User', userSchema);

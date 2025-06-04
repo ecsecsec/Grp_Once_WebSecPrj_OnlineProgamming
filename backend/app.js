@@ -20,11 +20,13 @@ const helloRoute = require('./routes/hello');
 const authRoute = require('./routes/auth');
 const submitRoute = require('./routes/submit');
 const problemRoutes = require('./routes/problem');
+const adminRoutes = require('./routes/admin/set-role');
 
 app.use('/api/hello', helloRoute);
 app.use('/api/auth', authRoute);
 app.use('/api/submit', submitRoute);
 app.use('/api/problem', problemRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Start server
 app.listen(PORT, () => {

@@ -1,4 +1,4 @@
-// backend/utils/ability.js (Ví dụ)
+// backend/abilities/defineAbility.js (Ví dụ)
 const { AbilityBuilder, createMongoAbility } = require('@casl/ability');
 
 function defineAbilityForUser(user) {

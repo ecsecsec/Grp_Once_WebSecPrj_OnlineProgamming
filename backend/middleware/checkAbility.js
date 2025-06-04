@@ -1,17 +1,19 @@
-const { AbilityBuilder, Ability } = require('@casl/ability');
+// backend/middleware/checkAbility.js
 
-function defineAbilitiesFor(role) {
-  const { can, cannot, build } = new AbilityBuilder(Ability);
+const { defineAbilityForUser } = require('../abilities/defineAbility');
 
-  if (role === 'admin') {
-    can('manage', 'all'); // toàn quyền
-  } else if (role === 'user') {
-    can('read', 'Post');
-    can('create', 'Comment');
-    cannot('delete', 'Post');
+const checkAbility = (action, subject) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required for authorization check.' });
   }
 
-  return build();
-}
+  const userAbility = defineAbilityForUser(req.user);
 
-module.exports = defineAbilitiesFor;
+  if (userAbility.can(action, subject)) {
+    return next();
+  }
+
+  return res.status(403).json({ message: `Forbidden: You are not authorized to ${action} ${subject}.` });
+};
+
+module.exports = checkAbility;

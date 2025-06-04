@@ -1,67 +1,109 @@
-import React, { useEffect, useState } from "react";
-import "./AdminScreen.css"; // 👉 dùng CSS riêng nếu cần
+import React, { useState, useEffect, useCallback } from "react";
+import axios from "axios";
+import "./AdminScreen.css";
+import { useAuth } from "../contexts/AuthContext";
 
 /**
- * Trang: Quản lý người dùng
- * - Hiển thị danh sách tất cả users
- * - Mỗi user 1 dòng
- * - Không hiển thị password, timestamps
+ * AdminScreen
+ * -------------
+ * - Chỉ admin mới được truy cập.
+ * - Lấy JWT token từ localStorage và gửi kèm trong mọi request.
+ * - Hiển thị danh sách user (mỗi user 1 dòng).
+ * - Cho phép:  (1) Cấp / Hủy quyền "creator"   (2) Xoá user (trừ admin).
  */
 function AdminScreen() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  /* ---------------------- Auth ---------------------- */
+  const { user, loading: authLoading } = useAuth();
+  const token = localStorage.getItem("token");
 
-  // 🧩 Dữ liệu mẫu (xoá khi gọi API thực)
-  const sampleUsers = [
-    {
-      _id: "u1",
-      name: "Nguyễn Văn A",
-      email: "a@example.com",
-      role: "user",
-    },
-    {
-      _id: "u2",
-      name: "Trần Thị B",
-      email: "b@example.com",
-      role: "creator",
-    },
-  ];
+  /* --------------------- State ---------------------- */
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  /* -------------------- Helpers --------------------- */
+  const authHeader = token
+    ? {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    : {};
+
+  /* -------------------- API CALLS ------------------- */
+  const fetchUsers = useCallback(async () => {
+    if (!user || user.role !== "admin" || !token) return;
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const { data } = await axios.get(
+        "http://localhost:5000/api/admin/users",
+        authHeader
+      );
+
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, token]);
 
   useEffect(() => {
-    // 👉 Thay bằng fetch thực tế: GET /api/users
-    setUsers(sampleUsers);
-    setLoading(false);
-  }, []);
+    if (!authLoading) fetchUsers();
+  }, [authLoading, fetchUsers]);
+
+  /* ------------ Handlers: role & delete ------------- */
+  const handleRoleToggle = async (id, currentRole) => {
+    if (!token) return;
+    const newRole = currentRole === "creator" ? "user" : "creator";
+
+    try {
+      const { data } = await axios.put(
+        `http://localhost:5000/api/admin/set-role/${id}`,
+        { role: newRole },
+        authHeader
+      );
+
+      setUsers((prev) =>
+        prev.map((u) => (u._id === id ? { ...u, role: data.user.role } : u))
+      );
+      alert(data.message || "Cập nhật vai trò thành công");
+    } catch (err) {
+      alert(err.response?.data?.message || err.message);
+    }
+  };
 
   const handleDelete = async (id) => {
+    if (!token) return;
     if (!window.confirm("Bạn có chắc muốn xoá tài khoản này không?")) return;
-    try {
-      // await fetch(`/api/users/${id}`, { method: "DELETE" });
-      setUsers((prev) => prev.filter((u) => u._id !== id));
-    } catch (err) {
-      alert("Lỗi: " + err.message);
-    }
-  };
 
-  const handleGrantCreator = async (id) => {
     try {
-      // await fetch(`/api/users/${id}/role`, { method: "PUT", body: JSON.stringify({ role: "creator" }) });
-      setUsers((prev) =>
-        prev.map((u) => (u._id === id ? { ...u, role: "creator" } : u))
+      await axios.delete(
+        `http://localhost:5000/api/admin/users/${id}`,
+        authHeader
       );
+      setUsers((prev) => prev.filter((u) => u._id !== id));
+      alert("Đã xoá người dùng thành công");
     } catch (err) {
-      alert("Lỗi: " + err.message);
+      alert(err.response?.data?.message || err.message);
     }
   };
 
-  if (loading) return <p>Đang tải dữ liệu...</p>;
+  /* -------------------- Guards UI ------------------- */
+  if (authLoading || loading) return <p>Đang tải dữ liệu...</p>;
+  if (!user) return <p>Bạn cần đăng nhập để truy cập trang này.</p>;
+  if (user.role !== "admin")
+    return <p>Bạn không có quyền truy cập trang này.</p>;
   if (error) return <p>Lỗi: {error}</p>;
 
+  /* --------------------- RENDER --------------------- */
   return (
     <div>
       <h2>Quản lý người dùng</h2>
-
       <table className="user-table">
         <thead>
           <tr>
@@ -72,29 +114,38 @@ function AdminScreen() {
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => (
-            <tr key={user._id}>
-              <td>{user.name}</td>
-              <td>{user.email}</td>
-              <td>{user.role}</td>
-              <td>
-                <div className="btn-actions">
-                  <button
-                    onClick={() => handleGrantCreator(user._id)}
-                    disabled={user.role === "creator"}
-                  >
-                    {user.role === "creator" ? "Sửa quyền" : "Cấp quyền"} 
-                  </button>
-                  <button
-                    className="btn-delete"
-                    onClick={() => handleDelete(user._id)}
-                  >
-                    Xóa
-                  </button>
-                </div>
-              </td>
+          {users.length === 0 ? (
+            <tr>
+              <td colSpan="4">Không có người dùng nào.</td>
             </tr>
-          ))}
+          ) : (
+            users.map((u) => (
+              <tr key={u._id}>
+                <td>{u.name}</td>
+                <td>{u.email}</td>
+                <td>{u.role}</td>
+                <td>
+                  <div className="btn-actions">
+                    {u.role !== "admin" && (
+                      <>
+                        <button
+                          onClick={() => handleRoleToggle(u._id, u.role)}
+                        >
+                          {u.role === "creator" ? "Hạn chế User" : "Cấp Creator"}
+                        </button>
+                        <button
+                          className="btn-delete"
+                          onClick={() => handleDelete(u._id)}
+                        >
+                          Xoá
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
