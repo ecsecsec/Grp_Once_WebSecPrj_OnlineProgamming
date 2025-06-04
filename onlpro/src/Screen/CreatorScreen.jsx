@@ -166,7 +166,7 @@ function CreatorScreen() {
                             {/* SỬA LỖI CASL: Truyền TRỰC TIẾP đối tượng problem vào ability.can() */}
                             {isAuthenticated && ability && ability.can('update', problem) && (
                                 <button
-                                    onClick={() => navigate(`/problem/edit/${problem._id}`, { state: { problem } })}
+                                    onClick={() => navigate(`/problem/edit/${problem.id}`, { state: { problem } })}
                                 >
                                     Sửa
                                 </button>
@@ -175,7 +175,7 @@ function CreatorScreen() {
                             {/* SỬA LỖI CASL: Truyền TRỰC TIẾP đối tượng problem vào ability.can() */}
                             {isAuthenticated && ability && ability.can('delete', problem) && (
                                 <button
-                                    onClick={() => handleDelete(problem._id)}
+                                    onClick={() => handleDelete(problem.id)}
                                     className="btn-delete"
                                 >
                                     Xóa

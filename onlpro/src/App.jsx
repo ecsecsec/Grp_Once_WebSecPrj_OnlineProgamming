@@ -14,6 +14,7 @@ import ProblemCreateScreen from './Screen/ProblemCreateScreen';
 import CreatorScreen from './Screen/CreatorScreen';
 import AdminScreen from './Screen/AdminScreen';
 import { AuthProvider, useAuth } from './contexts/AuthContext'; 
+import ProblemEditScreen from './Screen/ProblemEditScreen';
 
 const AppContent = () => {
     const { loading } = useAuth(); // Lấy trạng thái loading từ AuthContext
@@ -37,6 +38,7 @@ const AppContent = () => {
                 <Route path='/problem/create' element={<ProblemCreateScreen />} /> {/* Đặt route cụ thể trước */}
                 <Route path='/problem' element={<ProblemScreen />} />
                 <Route path='/problem/:problemId' element={<ProblemDetailScreen />} />
+                <Route path='/problem/edit/:id' element={<ProblemEditScreen />} />
 
                 <Route path='/contest' element={<ContestScreen />} />
                 <Route path='/byCreator' element={<CreatorScreen />} />

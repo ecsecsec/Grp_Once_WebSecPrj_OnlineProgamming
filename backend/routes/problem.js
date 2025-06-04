@@ -101,7 +101,7 @@ router.post('/create', authMiddleware, async (req, res) => {
 // @access  Public (hoặc private tùy yêu cầu)
 router.get('/:id', async (req, res) => {
     try {
-        const problem = await Problem.findById(req.params.id); // <-- SỬ DỤNG _id của MongoDB
+        const problem = await Problem.findOne({id: req.params.id}); // <-- SỬ DỤNG _id của MongoDB
         // Nếu bạn muốn tìm bằng 'id' tùy chỉnh của mình (ví dụ P001), bạn cần dùng:
         // const problem = await Problem.findOne({ id: req.params.id });
 
