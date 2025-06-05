@@ -157,7 +157,6 @@ function CreatorScreen() {
                             <h3>{problem.title}</h3>
                             {/* Hiển thị cả ID tùy chỉnh (problem.id) và MongoDB _id (problem._id) để dễ debug */}
                             <p><strong>Mã bài tập:</strong> {problem.id}</p> {/* ID tùy chỉnh của bạn */}
-                            <p><strong>MongoDB ID:</strong> {problem._id}</p> {/* ID của MongoDB */}
                             <p><strong>Dạng bài:</strong> {problem.type}</p>
                             <p><strong>Đã giải:</strong> {problem.solvedBy || 0}</p>
                         </div>
