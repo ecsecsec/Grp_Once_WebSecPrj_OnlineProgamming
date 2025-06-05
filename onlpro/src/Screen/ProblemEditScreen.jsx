@@ -248,6 +248,14 @@ function ProblemEditScreen() {
                             onChange={(e) => handleTestcaseChange(index, 'expectedOutput', e.target.value)}
                             required
                         />
+                        <label className="checkbox-container">
+                            <input
+                                type="checkbox"
+                                checked={tc.isSample}
+                                onChange={(e) => handleTestcaseChange(index, 'isSample', e.target.checked)}
+                            />
+                            <span>Testcase mẫu</span>
+                        </label>
 
                         {formData.testcases.length > 1 && (
                             <button type="button" onClick={() => removeTestcase(index)} className="testcase-remove-btn">Xóa testcase</button>

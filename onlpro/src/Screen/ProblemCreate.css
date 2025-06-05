@@ -151,3 +151,11 @@
 .add-testcase-btn:hover {
   background-color: #3288b6;
 }
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap; /* ngăn xuống dòng */
+  cursor: pointer;
+  max-width: 50px;
+}

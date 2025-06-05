@@ -16,7 +16,7 @@ function ProblemCreateScreen() {
         solvedBy: 0,
         creatorId: '', // Sẽ được điền từ user.id của AuthContext
         testcases: [
-            { input: '', expectedOutput: '' }
+            { input: '', expectedOutput: '', isSample: false }
         ],
         timeLimit: 1000,
         memoryLimit: 256,
@@ -53,13 +53,17 @@ function ProblemCreateScreen() {
 
     const handleTestcaseChange = (index, field, value) => {
         const newTestcases = [...formData.testcases];
-        newTestcases[index][field] = value;
+        if (field === 'isSample') {
+            newTestcases[index][field] = value; // value là boolean
+        } else {
+            newTestcases[index][field] = value;
+        }
         setFormData({ ...formData, testcases: newTestcases });
     };
 
     const addTestcase = () => {
         if (formData.testcases.length < 5) { // Giới hạn 5 testcase
-            setFormData({ ...formData, testcases: [...formData.testcases, { input: '', expectedOutput: '' }] });
+            setFormData({ ...formData, testcases: [...formData.testcases, { input: '', expectedOutput: '', isSample: false }] });
         }
     };
     const removeTestcase = (index) => {
@@ -196,6 +200,15 @@ function ProblemCreateScreen() {
                             onChange={(e) => handleTestcaseChange(index, 'expectedOutput', e.target.value)}
                             required
                         />
+                        <label className="checkbox-container">
+                            <input
+                                type="checkbox"
+                                checked={tc.isSample}
+                                onChange={(e) => handleTestcaseChange(index, 'isSample', e.target.checked)}
+                            />
+                            <span>Testcase mẫu</span>
+                        </label>
+
 
                         {formData.testcases.length > 1 && (
                             <button
