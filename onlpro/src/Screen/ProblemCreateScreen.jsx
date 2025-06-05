@@ -18,6 +18,8 @@ function ProblemCreateScreen() {
         testcases: [
             { input: '', expectedOutput: '' }
         ],
+        timeLimit: 1000,
+        memoryLimit: 256,
     });
 
     // Sử dụng useEffect để cập nhật creatorId vào formData khi user (từ AuthContext) thay đổi
@@ -40,7 +42,13 @@ function ProblemCreateScreen() {
     }, [user, isAuthenticated, loading, navigate]); // Dependencies cho useEffect
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        // Chuyển đổi timeLimit và memoryLimit sang số nếu cần
+        if (name === "timeLimit" || name === "memoryLimit") {
+            setFormData({ ...formData, [name]: Number(value) });
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
     };
 
     const handleTestcaseChange = (index, field, value) => {
@@ -69,7 +77,7 @@ function ProblemCreateScreen() {
             alert("Bạn không có quyền tạo bài tập.");
             return;
         }
-        
+
         // Kiểm tra creatorId đã được điền chưa (được điền bởi useEffect)
         if (!formData.creatorId) {
             alert("Creator ID không có sẵn. Vui lòng đăng nhập lại và thử.");
@@ -151,9 +159,25 @@ function ProblemCreateScreen() {
                 <label>Mô tả chi tiết</label>
                 <textarea name="detail" value={formData.detail} onChange={handleChange} />
 
-                {/* Thêm trường image nếu schema của bạn có nó */}
-                <label>Link ảnh (tùy chọn)</label>
-                <input name="image" value={formData.image} onChange={handleChange} />
+                <label>Giới hạn thời gian (ms)</label>
+                <input
+                    type="number" // Sử dụng type="number"
+                    name="timeLimit"
+                    value={formData.timeLimit}
+                    onChange={handleChange}
+                    required // Đảm bảo người dùng phải nhập
+                    min="1" // Giá trị tối thiểu là 1
+                />
+
+                <label>Giới hạn bộ nhớ (MB)</label>
+                <input
+                    type="number" // Sử dụng type="number"
+                    name="memoryLimit"
+                    value={formData.memoryLimit}
+                    onChange={handleChange}
+                    required // Đảm bảo người dùng phải nhập
+                    min="1" // Giá trị tối thiểu là 1
+                />
 
                 <h3>Testcases</h3>
                 {formData.testcases.map((tc, index) => (

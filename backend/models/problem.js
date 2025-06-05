@@ -22,6 +22,8 @@ const ProblemSchema = new mongoose.Schema({
         required: true 
     },
     testcases: [TestcaseSchema],
+    timeLimit: {type: Number, required: true, default: 1000},
+    memoryLimit: {type: Number, required: true, default: 256}
 });
 
 module.exports = mongoose.models.Problem || mongoose.model('Problem', ProblemSchema);
