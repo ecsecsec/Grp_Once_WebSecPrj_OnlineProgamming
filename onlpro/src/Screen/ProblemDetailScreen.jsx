@@ -55,7 +55,7 @@ function ProblemDetailScreen() {
         setTestResults([]); // Xóa kết quả cũ trước khi submit mới
 
         try {
-            const response = await fetch("http://localhost:5000/api/submit", {
+            const response = await fetch("http://localhost:5000/api/submissions", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

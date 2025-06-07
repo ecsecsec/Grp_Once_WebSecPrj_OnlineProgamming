@@ -1,5 +1,5 @@
-FROM gcc:latest
-WORKDIR /app
-COPY runner.cpp .
-RUN g++ runner.cpp -o runner
-ENTRYPOINT ["./runner"]
+# backend/sandbox/cpp/Dockerfile
+FROM gcc:latest 
+# Hoặc phiên bản trong LANG_CONFIG của runInDocker.js
+
+RUN useradd -m -s /bin/bash appuser

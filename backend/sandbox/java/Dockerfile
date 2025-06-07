@@ -1,5 +1,5 @@
-FROM openjdk:17
-WORKDIR /app
-COPY Runner.java .
-RUN javac Runner.java
-ENTRYPOINT ["java", "Runner"]
+# backend/sandbox/java/Dockerfile
+FROM openjdk:17-jdk-slim 
+# Hoặc phiên bản trong LANG_CONFIG của runInDocker.js
+
+RUN useradd -m -s /bin/bash appuser

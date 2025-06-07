@@ -1,213 +1,194 @@
-const { exec } = require('child_process'); // Để thực thi các lệnh hệ thống (Docker)
-const fs = require('fs/promises');       // Sử dụng fs.promises cho các thao tác file bất đồng bộ
-const path = require('path');             // Để xử lý đường dẫn file
-const { v4: uuidv4 } = require('uuid');   // Để tạo ID duy nhất cho các thư mục sandbox
+// backend/utils/runInDocker.js
+const { exec } = require('child_process');
+const fs = require('fs/promises');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
-// Cấu hình giới hạn tài nguyên chung cho các lần thực thi
-const TIME_LIMIT_SECONDS = 5; // Giới hạn thời gian chạy cho mỗi test case (5 giây)
-const MEMORY_LIMIT_MB = 256;  // Giới hạn bộ nhớ cho mỗi test case (256 MB)
+// MEMORY_LIMIT_MB sẽ được lấy từ problemConfig
+// TIME_LIMIT_SECONDS sẽ được lấy từ problemConfig
 
-// Cấu hình cho từng ngôn ngữ: Docker image, tên file, lệnh biên dịch/chạy
 const LANG_CONFIG = {
     python: {
-        dockerImage: 'python:3.9-slim', // Image Docker cho Python
-        fileName: 'main.py',           // Tên file code Python sẽ được lưu
-        compileCommand: null,          // Python không cần biên dịch
-        // Lệnh chạy code Python trong container, sử dụng /bin/bash -c để xử lý redirection
+        dockerImage: 'my-python-runner:v1', // CẬP NHẬT TÊN IMAGE CỦA BẠN
+        fileName: 'main.py',
+        compileCommand: null,
         runCommand: (filename) => `/bin/bash -c "python3 ${filename} < input.txt > output.txt 2> error.txt"`,
     },
     c_cpp: {
-        dockerImage: 'gcc:latest',     // Image Docker cho C++ (hoặc g++:latest)
-        fileName: 'main.cpp',          // Tên file code C++ sẽ được lưu
-        compiledFileName: 'a.out',     // Tên file thực thi sau khi biên dịch
-        // Lệnh biên dịch C++
-        compileCommand: (filename, compiledFilename) => `g++ ${filename} -o ${compiledFilename} -Wall -Wextra`,
-        // Lệnh chạy code C++ đã biên dịch trong container
+        dockerImage: 'my-gcc-runner:v1', // CẬP NHẬT TÊN IMAGE CỦA BẠN
+        fileName: 'main.cpp',
+        compiledFileName: 'a.out',
+        compileCommand: (filename, compiledFilename) => `g++ ${filename} -o ${compiledFilename} -O2 -std=c++17 -Wall -Wextra -DONLINE_JUDGE -static`, // Thêm flags
         runCommand: (compiledFilename) => `/bin/bash -c "./${compiledFilename} < input.txt > output.txt 2> error.txt"`,
     },
     java: {
-        dockerImage: 'openjdk:17-jdk-slim', // Image Docker cho Java
-        fileName: 'Main.java',             // Tên file code Java (phải khớp tên class chính)
-        className: 'Main',                 // Tên class chính để chạy
-        // Lệnh biên dịch Java
+        dockerImage: 'my-java-runner:v1', // CẬP NHẬT TÊN IMAGE CỦA BẠN
+        fileName: 'Main.java',
+        className: 'Main', // Đảm bảo code người dùng có class Main
         compileCommand: (filename) => `javac ${filename}`,
-        // Lệnh chạy code Java đã biên dịch trong container
         runCommand: (className) => `/bin/bash -c "java ${className} < input.txt > output.txt 2> error.txt"`,
     },
-    // Bạn có thể thêm cấu hình cho các ngôn ngữ khác tại đây
 };
 
-/**
- * Thực thi một lệnh Docker bên trong một container cô lập.
- * @param {string} dockerImage - Tên Docker image để sử dụng (ví dụ: 'python:3.9-slim').
- * @param {string} commandToRunInsideContainer - Lệnh sẽ được chạy bên trong container (ví dụ: 'python3 main.py < input.txt').
- * @param {string} sandboxPath - Đường dẫn tuyệt đối đến thư mục sandbox trên host.
- * @param {number} timeoutSeconds - Thời gian tối đa cho phép thực thi lệnh (giây).
- * @returns {Promise<Object>} - Kết quả thực thi bao gồm stdout, stderr, trạng thái timeout/memory/compile error.
- */
-async function executeCommandInDocker(dockerImage, commandToRunInsideContainer, sandboxPath, timeoutSeconds) {
+// Hàm executeCommandInDocker (Nội dung gần như giữ nguyên, chỉ đảm bảo dockerUser là 'appuser')
+async function executeCommandInDocker(dockerImage, commandToRunInsideContainer, sandboxPath, timeoutSeconds, memoryLimitMb) {
     return new Promise((resolve) => {
-        // Lệnh Docker cơ bản với các giới hạn và mount volume
-        const dockerBaseCommand = `docker run --rm -v "${sandboxPath}":/usr/src/app -w /usr/src/app --memory="${MEMORY_LIMIT_MB}m" --memory-swap="${MEMORY_LIMIT_MB}m" --network=none --pids-limit=100`;
-        
-        // Xây dựng lệnh Docker hoàn chỉnh: docker run [options] <image_name> <command_inside_container>
-        // LƯU Ý QUAN TRỌNG: Đảm bảo cú pháp chính xác
+        const dockerUser = 'appuser'; // User đã tạo trong image base
+        // Điều chỉnh pids-limit nếu cần, 64 là khá an toàn
+        const dockerBaseCommand = `docker run --rm --user ${dockerUser} -v "${sandboxPath}":/usr/src/app -w /usr/src/app --memory="${memoryLimitMb}m" --memory-swap="${memoryLimitMb}m" --network=none --pids-limit=64 --cap-drop=ALL`; // Thêm --cap-drop=ALL
+
         const fullCommand = `${dockerBaseCommand} ${dockerImage} ${commandToRunInsideContainer}`;
+        // console.log(`[Docker Exec] Running: ${fullCommand}`); // Bỏ comment nếu cần debug
 
-        console.log(`[Docker Exec] Running: ${fullCommand}`); // Debug log: Hiển thị lệnh Docker đầy đủ
-
-        // Thực thi lệnh Docker
         exec(fullCommand, {
-            timeout: timeoutSeconds * 1000, // Chuyển đổi timeout sang mili giây
-            killSignal: 'SIGKILL',          // Tín hiệu gửi để dừng tiến trình nếu timeout
-        }, async (error, stdoutBuffer, stderrBuffer) => { // async callback để dùng await cho fs.readFile
-            // Đọc stdout và stderr từ các file trong sandbox (vì redirection)
-            let stdout = '';
-            let stderr = '';
-            let timeTaken = 0; // Thời gian thực thi code trong container (sẽ được cập nhật sau)
-            let memoryUsed = 'N/A'; // Bộ nhớ sử dụng (khó đo chính xác từ đây mà không dùng docker stats)
-
-            try {
-                // Cố gắng đọc output và error từ các file đã được redirect
-                stdout = (await fs.readFile(path.join(sandboxPath, 'output.txt'), 'utf8')).trim();
-                stderr = (await fs.readFile(path.join(sandboxPath, 'error.txt'), 'utf8')).trim();
-            } catch (fileReadError) {
-                // Nếu không đọc được file (có thể do lỗi sớm hoặc file không được tạo)
-                console.warn(`[Docker Exec] Could not read output/error files: ${fileReadError.message}`);
-                // Fallback: nếu có lỗi từ exec, sử dụng stderrBuffer
-                stderr = stderr || stderrBuffer.toString().trim();
-            }
-
-            // Mongoose trả về trạng thái mặc định
+            timeout: timeoutSeconds * 1000,
+            killSignal: 'SIGKILL',
+        }, async (error, stdoutBuffer, stderrBuffer) => { // stdoutBuffer, stderrBuffer là từ exec, không phải từ file
+            let stdoutFromFile = '';
+            let stderrFromFile = '';
             let isTimeout = false;
             let isMemoryLimit = false;
-            let isCompileError = false; // Mặc định là false, sẽ kiểm tra sau
+            // isCompileError sẽ được xác định ở hàm gọi `runInDocker` dựa trên bước (compile/run)
+            let exitCode = error ? error.code : 0;
+
+            try {
+                stdoutFromFile = (await fs.readFile(path.join(sandboxPath, 'output.txt'), 'utf8')).trim();
+            } catch (e) { /* File có thể không được tạo nếu lỗi sớm */ }
+            try {
+                stderrFromFile = (await fs.readFile(path.join(sandboxPath, 'error.txt'), 'utf8')).trim();
+            } catch (e) { /* File có thể không được tạo */ }
+
+            // Ưu tiên nội dung từ file error.txt nếu có, nếu không thì từ error object của exec
+            let finalStderr = stderrFromFile || (error ? error.message : '');
+            if (error && !stderrFromFile && stderrBuffer.length > 0) { // Nếu file error rỗng nhưng exec có stderr
+                finalStderr = stderrBuffer.toString().trim();
+            }
+
 
             if (error) {
-                // Kiểm tra nếu là lỗi timeout
+                // error.killed là true nếu process bị kill bởi signal (bao gồm timeout)
                 if (error.killed && error.signal === 'SIGKILL') {
-                    isTimeout = true;
-                } else if (stderr.includes('Memory limit exceeded') || (stderrBuffer.toString().includes('killed') && stderrBuffer.toString().includes('memory'))) {
-                    // Kiểm tra thông báo hết bộ nhớ từ Docker hoặc kernel
+                    // Kiểm tra exit code để phân biệt TLE và MLE
+                    // Docker trả về 137 (128 + 9 (SIGKILL)) khi OOM killer hoạt động
+                    // Timeout từ `exec` cũng dùng SIGKILL, nhưng exit code có thể khác (hoặc null)
+                    // Đây là một điểm hơi khó phân biệt chính xác 100% chỉ với `exec`
+                    // Giả sử nếu `exec` timeout, `error.code` có thể không phải 137.
+                    if (exitCode === 137) {
+                        isMemoryLimit = true;
+                    } else {
+                        isTimeout = true; // Mặc định là TLE nếu bị kill bởi SIGKILL và không phải code 137
+                    }
+                } else if (exitCode === 137) { // OOM Killer (không phải do timeout của exec)
                     isMemoryLimit = true;
-                } else {
-                    // Các lỗi khác (lỗi Docker, lỗi lệnh không tìm thấy trong container, v.v.)
-                    // Coi đây là Compile Error nếu nó xảy ra trong giai đoạn biên dịch,
-                    // hoặc Runtime Error nếu xảy ra trong giai đoạn thực thi.
-                    // Chúng ta sẽ phân loại chi tiết hơn ở hàm runInDocker chính.
-                    isCompileError = true; // Mặc định là lỗi biên dịch/runtime nếu có error object
-                    stderr = stderr || error.message; // Ưu tiên stderr từ file, nếu không có thì lấy từ error object
                 }
+                // Các lỗi khác (lỗi lệnh, lỗi runtime không bị kill) sẽ có exitCode != 0
             }
 
             resolve({
-                stdout,
-                stderr,
+                stdout: stdoutFromFile, // Luôn lấy stdout từ file
+                stderr: finalStderr,    // stderr đã được xử lý
                 isTimeout,
                 isMemoryLimit,
-                isCompileError, // `true` nếu có lỗi từ exec hoặc stderr (sẽ phân loại lại ở hàm gọi)
-                timeTaken,      // Cập nhật sau
-                memoryUsed,     // Cập nhật sau
+                exitCode
             });
         });
     });
 }
 
-/**
- * Hàm chính để chạy code của người dùng trong môi trường Docker sandbox.
- * @param {string} code - Đoạn code của người dùng.
- * @param {string} language - Ngôn ngữ lập trình của code (ví dụ: 'python', 'c_cpp', 'java').
- * @param {string} input - Dữ liệu đầu vào cho chương trình.
- * @returns {Promise<Object>} - Kết quả chấm điểm.
- */
-module.exports = async function runInDocker(code, language, input) {
+
+// Hàm module.exports = async function runInDocker(...)
+// (Nội dung hàm này giữ nguyên như trong đề xuất trước, chỉ truyền thêm memoryLimitMb vào executeCommandInDocker)
+module.exports = async function runInDocker(code, language, input, problemConfig) {
+    const timeLimitSeconds = Math.ceil((problemConfig.timeLimit || 5000) / 1000); // Sửa problemConfig.time_limit_ms thành problemConfig.timeLimit
+    const memoryLimitMb = problemConfig.memoryLimit || 256; // Sửa problemConfig.memory_limit_mb thành problemConfig.memoryLimit
+
     const config = LANG_CONFIG[language];
     if (!config) {
-        // Trả về lỗi nếu ngôn ngữ không được hỗ trợ
-        return {
-            stdout: '',
-            stderr: 'Error: Language not supported.',
-            isCompileError: true,
-            isTimeout: false,
-            isMemoryLimit: false,
-            timeTaken: 0,
-            memoryUsed: 'N/A'
-        };
+        // Trả về cấu trúc nhất quán hơn
+        return { status: 'System Error', stderr: `Error: Language ${language} not supported.`, stdout: '', exitCode: -1, time_ms:0, memory_kb:0 };
     }
 
-    const sandboxId = uuidv4(); // Tạo ID duy nhất cho thư mục sandbox
-    // Đường dẫn đến thư mục sandbox trên host (tạo trong thư mục 'sandboxes' ở gốc dự án)
-    const sandboxDir = path.join(process.cwd(), 'sandboxes', sandboxId); 
+    const sandboxId = uuidv4();
+    const sandboxDir = path.join(process.cwd(), 'sandboxes', sandboxId);
 
-    let result = {
+    const resultForTestCase = {
         stdout: '',
         stderr: '',
-        isCompileError: false,
-        isTimeout: false,
-        isMemoryLimit: false,
-        timeTaken: 0,
-        memoryUsed: 'N/A' 
+        status: 'Pending', // Trạng thái xử lý của test case (Success, TLE, MLE, RE, CE)
+        time_ms: 0,
+        memory_kb: 0, // Hiện tại chưa đo chính xác, có thể là giới hạn
+        exitCode: 0
     };
-
-    const startTime = process.hrtime.bigint(); // Bắt đầu tính thời gian tổng thể
+    const startTime = process.hrtime.bigint();
 
     try {
-        // 1. Tạo thư mục sandbox và ghi file code/input
-        await fs.mkdir(sandboxDir, { recursive: true }); // Tạo thư mục, bao gồm cả thư mục cha nếu chưa có
-        await fs.writeFile(path.join(sandboxDir, config.fileName), code); // Ghi code vào file
-        await fs.writeFile(path.join(sandboxDir, 'input.txt'), input);   // Ghi input vào file
+        await fs.mkdir(sandboxDir, { recursive: true });
+        await fs.writeFile(path.join(sandboxDir, config.fileName), code);
+        await fs.writeFile(path.join(sandboxDir, 'input.txt'), input || ''); // Đảm bảo input rỗng là file rỗng
 
-        // 2. Bước Biên dịch (nếu ngôn ngữ yêu cầu)
         if (config.compileCommand) {
-            const compileCommand = config.compileCommand(config.fileName, config.compiledFileName);
-            const compileResult = await executeCommandInDocker(config.dockerImage, compileCommand, sandboxDir, TIME_LIMIT_SECONDS);
-            
-            // Nếu có lỗi trong quá trình biên dịch (stderr hoặc timeout/memory limit)
-            if (compileResult.stderr || compileResult.isTimeout || compileResult.isMemoryLimit) {
-                result.stderr = compileResult.stderr || 'Compile Error: Unknown reason.';
-                result.isCompileError = true;
-                result.isTimeout = compileResult.isTimeout;
-                result.isMemoryLimit = compileResult.isMemoryLimit;
-                // Thêm một log để debug lỗi biên dịch cụ thể
-                console.error(`[Compile Error] Problem ID: ${sandboxId}, Lang: ${language}, Stderr: ${result.stderr}`);
-                return result; // Dừng lại ngay nếu biên dịch thất bại
+            const compileCmd = config.compileCommand(config.fileName, config.compiledFileName);
+            // Giảm thời gian biên dịch một chút so với thời gian chạy tổng
+            const compileTimeLimit = Math.max(5, Math.floor(timeLimitSeconds / 2)); // Ít nhất 5s hoặc 1/2 TLE
+            const compileResult = await executeCommandInDocker(config.dockerImage, compileCmd, sandboxDir, compileTimeLimit, memoryLimitMb);
+            resultForTestCase.exitCode = compileResult.exitCode;
+
+            if (compileResult.isTimeout) {
+                resultForTestCase.status = 'Compilation Timeout';
+                resultForTestCase.stderr = compileResult.stderr || "Compilation process timed out.";
+            } else if (compileResult.isMemoryLimit) {
+                resultForTestCase.status = 'Compilation Memory Limit Exceeded';
+                resultForTestCase.stderr = compileResult.stderr || "Compilation process exceeded memory limit.";
+            } else if (compileResult.exitCode !== 0 || compileResult.stderr) { // Lỗi biên dịch
+                resultForTestCase.status = 'Compilation Error';
+                resultForTestCase.stderr = compileResult.stderr || 'Compile Error: Unknown reason.';
+            }
+
+            if (resultForTestCase.status !== 'Pending') { // Nếu có lỗi biên dịch thì dừng
+                return resultForTestCase; // Đã bao gồm status, stderr, stdout (nếu có từ compile)
             }
         }
 
-        // 3. Bước Thực thi code
-        const runCommand = config.runCommand(config.compiledFileName || config.fileName || config.className);
-        const executionResult = await executeCommandInDocker(config.dockerImage, runCommand, sandboxDir, TIME_LIMIT_SECONDS);
+        // Bước thực thi
+        const runCmd = config.runCommand(config.compiledFileName || config.className || config.fileName);
+        const executionResult = await executeCommandInDocker(config.dockerImage, runCmd, sandboxDir, timeLimitSeconds, memoryLimitMb);
+        resultForTestCase.exitCode = executionResult.exitCode;
+        resultForTestCase.stdout = executionResult.stdout; // stdout từ file output.txt
 
-        result.stdout = executionResult.stdout;
-        result.stderr = executionResult.stderr;
-        result.isTimeout = executionResult.isTimeout;
-        result.isMemoryLimit = executionResult.isMemoryLimit;
-
-        // Phân loại lỗi Runtime Error
-        if (executionResult.stderr && !executionResult.isTimeout && !executionResult.isMemoryLimit) {
-            // Nếu có stderr nhưng không phải do timeout/memory, thì đó là Runtime Error
-            result.isCompileError = false; // Đảm bảo không phải lỗi biên dịch
-            // Bạn có thể thêm logic phân biệt cụ thể hơn nếu cần (ví dụ: lỗi hệ thống vs lỗi chương trình)
+        if (executionResult.isTimeout) {
+            resultForTestCase.status = 'Time Limit Exceeded';
+            resultForTestCase.stderr = executionResult.stderr || "Execution timed out."; // stderr có thể chứa output cuối cùng trước TLE
+        } else if (executionResult.isMemoryLimit) {
+            resultForTestCase.status = 'Memory Limit Exceeded';
+            resultForTestCase.stderr = executionResult.stderr || "Execution exceeded memory limit.";
+        } else if (executionResult.exitCode !== 0 || executionResult.stderr) { // Lỗi runtime
+            resultForTestCase.status = 'Runtime Error';
+            resultForTestCase.stderr = executionResult.stderr || 'Runtime Error: Unknown reason.';
+        } else {
+            resultForTestCase.status = 'Success'; // Chạy thành công (chưa so sánh output)
+            // stderr có thể chứa warning, không nhất thiết là lỗi nếu exitCode = 0
+            if (executionResult.stderr) {
+                 console.warn(`[Execution Warning] Sandbox: ${sandboxId}, Lang: ${language}, Stderr (but Success): ${executionResult.stderr}`);
+                 // Quyết định có gán vào resultForTestCase.stderr hay không
+                 // resultForTestCase.stderr = executionResult.stderr;
+            }
         }
 
     } catch (error) {
-        // Xử lý các lỗi xảy ra trong quá trình quản lý file hoặc Docker (ví dụ: không tạo được thư mục)
-        console.error(`[runInDocker Global Error] Problem ID: ${sandboxId}, Lang: ${language}, Error: ${error.message}`);
-        result.stderr = `Server error during code execution setup: ${error.message}`;
-        result.isCompileError = true; // Coi là lỗi tổng quát nếu nằm ngoài phần chấm điểm
+        // Lỗi trong quá trình setup file, thư mục (ngoài Docker exec)
+        console.error(`[runInDocker Function Error] Sandbox: ${sandboxId}, Lang: ${language}, Error: ${error.message}`);
+        resultForTestCase.stderr = `Server error during sandbox execution: ${error.message}`;
+        resultForTestCase.status = 'System Error';
+        resultForTestCase.exitCode = -1;
     } finally {
         const endTime = process.hrtime.bigint();
-        // Tính thời gian thực thi tổng thể (từ khi bắt đầu ghi file đến khi hoàn thành Docker)
-        result.timeTaken = Number(endTime - startTime) / 1_000_000_000; 
-        
-        // Dọn dẹp thư mục sandbox
+        resultForTestCase.time_ms = Math.round(Number(endTime - startTime) / 1_000_000);
+
         try {
             await fs.rm(sandboxDir, { recursive: true, force: true });
-            // console.log(`[Cleanup] Sandbox ${sandboxId} removed.`); // Log dọn dẹp
         } catch (cleanupError) {
             console.error(`[Cleanup Error] Failed to remove sandbox ${sandboxId}: ${cleanupError.message}`);
         }
     }
-
-    return result;
+    return resultForTestCase;
 };
