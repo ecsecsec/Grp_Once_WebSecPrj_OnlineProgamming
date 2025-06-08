@@ -1,0 +1,58 @@
+.contest-container {
+    padding: 20px;
+    max-width: 1000px;
+    margin: auto;
+}
+
+.tab-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.tab-buttons button {
+    padding: 10px 20px;
+    border: none;
+    background-color: #eee;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.tab-buttons button.active {
+    background-color: #4caf50;
+    color: white;
+}
+
+.contest-list {
+    display: grid;
+    gap: 20px;
+}
+
+.contest-card {
+    display: flex;
+    gap: 20px;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.contest-card img {
+    width: 300px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+
+.contest-info {
+    flex: 1;
+    color: #000;
+}
+
+.contest-info h3 {
+    margin: 0 0 10px;
+}
+
+.ranking ol {
+    margin: 5px 0 0 20px;
+}

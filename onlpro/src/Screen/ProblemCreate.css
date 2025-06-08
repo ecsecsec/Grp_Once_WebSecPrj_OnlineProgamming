@@ -1,0 +1,161 @@
+.create-problem-container {
+  max-width: 600px;
+  margin: 40px auto;
+  background: #f9f9f9;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.problem-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.problem-form label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.problem-form input,
+.problem-form textarea {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+  resize: vertical;
+}
+
+.problem-form button[type="submit"] {
+  padding: 12px;
+  background-color: #28a745;
+  border: none;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  align-self: flex-start;
+  margin-top: 10px;
+}
+
+.problem-form button[type="submit"]:hover {
+  background-color: #218838;
+}
+
+/* Style riêng cho phần testcase */
+.problem-form h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  color: #222;
+  border-bottom: 2px solid #28a745;
+  padding-bottom: 4px;
+}
+
+.problem-form > div {
+  /* mỗi testcase container */
+  border: 1px solid #ddd;
+  padding: 10px 15px;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+}
+
+.problem-form > div + div {
+  margin-top: 15px;
+}
+
+.problem-form button[type="button"] {
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+/* Nút thêm testcase */
+.problem-form button[type="button"]:nth-last-child(2) {
+  background-color: #1613ba;
+  color: white;
+}
+
+.problem-form button[type="button"]:nth-last-child(2):hover {
+  background-color: #1613ba;
+}
+
+/* Nút xóa testcase */
+.problem-form button[type="button"]:not(:nth-last-child(2)) {
+  background-color: #3e4c8b;
+  color: white;
+}
+
+.problem-form button[type="button"]:not(:nth-last-child(2)):hover {
+  background-color: #3e4c8b;
+}
+
+.testcase-container {
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #fdfdfd;
+}
+
+.testcase-container label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 5px;
+  color: #444;
+}
+
+.testcase-container textarea {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.testcase-remove-btn {
+  margin-top: 5px;
+  background-color: #263089;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.testcase-remove-btn:hover {
+  background-color: #263089;
+}
+
+.add-testcase-btn {
+  margin-bottom: 15px;
+  background-color: #3288b6;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.add-testcase-btn:hover {
+  background-color: #3288b6;
+}
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap; /* ngăn xuống dòng */
+  cursor: pointer;
+  max-width: 50px;
+}
