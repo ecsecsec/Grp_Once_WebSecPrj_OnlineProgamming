@@ -6,8 +6,8 @@ function Footer(){
         <footer className="footer">
             <div className="footer-container">
                 <div className="footer-section">
-                    <h3>Name</h3>
-                    <p>text</p>
+                    <h3>Thông tin liên hệ</h3>
+                    <p>...</p>
                 </div>
 
                 <div className="footer-section">

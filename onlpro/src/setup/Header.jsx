@@ -27,7 +27,7 @@ function Header() {
     return (
         <header className='header'>
             <div className='left-group'>
-                <NavLink to="/" className="logo">Name</NavLink>
+                <NavLink to="/" className="logo">Web</NavLink>
                 <nav className={`nav ${isMenuOpen ? 'open' : ''}`}>
                     <NavLink to="/home" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => setMenuOpen(false)}>Trang chủ</NavLink>
                     <NavLink to="/problem" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => setMenuOpen(false)}>Bài tập</NavLink>

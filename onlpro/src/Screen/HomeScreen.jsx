@@ -30,7 +30,7 @@ function Home() {
       {error ? (
         <p style={{ color: 'red' }}>{error}</p>
       ) : (
-        <p>Backend says: {message}</p>
+        <p>{message}</p>
       )}
     </div>
   );
