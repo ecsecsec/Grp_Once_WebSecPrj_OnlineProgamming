@@ -97,7 +97,7 @@ async function executeCommandInDocker(dockerImage, commandToRunInsideContainer, 
     });
 }
 
-module.exports = async function runInDocker(code, language, input, problemConfig) {
+async function runInDocker(code, language, input, problemConfig) {
     // Lấy giới hạn từ problemConfig, nếu không có thì dùng giá trị mặc định
     const timeLimitSeconds = Math.ceil((problemConfig.timeLimit || 5000) / 1000);
     const memoryLimitMb = problemConfig.memoryLimit || 256;
@@ -205,4 +205,9 @@ module.exports = async function runInDocker(code, language, input, problemConfig
         }
     }
     return resultForTestCase;
+};
+
+module.exports = {
+    runInDocker,
+    LANG_CONFIG
 };

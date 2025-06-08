@@ -9,7 +9,7 @@ import "ace-builds/src-noconflict/mode-java";
 
 
 function ProblemDetailScreen() {
-    const { problemId } = useParams();
+    const { problemId } = useParams(); // problemId ở đây là _id từ URL
     const [problem, setProblem] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -18,9 +18,8 @@ function ProblemDetailScreen() {
     const [code, setCode] = useState('');
     const [language, setLanguage] = useState('python');
 
-    // Sửa lỗi: Khai báo đúng tên state
-    const [submissionStatus, setSubmissionStatus] = useState(null); // Trạng thái tổng thể: Accepted, Failed, Running...
-    const [testResults, setTestResults] = useState([]); // Kết quả chi tiết từng test case
+    const [submissionStatus, setSubmissionStatus] = useState(null);
+    const [testResults, setTestResults] = useState([]);
 
     const [subHistory, setSubHistory] = useState([]);
 
@@ -28,9 +27,12 @@ function ProblemDetailScreen() {
         const fetchProblem = async () => {
             try {
                 setLoading(true);
+                // Cập nhật URL API để khớp với backend đã thay đổi (sử dụng /api/problems/:id)
                 const response = await fetch(`http://localhost:5000/api/problem/${problemId}`);
                 if (!response.ok) {
-                    throw new Error(`Error: ${response.status}`);
+                    // Cố gắng đọc thông báo lỗi từ backend
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Error: ${response.status}`);
                 }
                 const data = await response.json();
                 setProblem(data);
@@ -43,39 +45,67 @@ function ProblemDetailScreen() {
             }
         };
         fetchProblem();
-    }, [problemId]);
+    }, [problemId]); // Thêm problemId vào dependency array để re-fetch khi ID thay đổi
 
     if (loading) return <div>Đang tải bài tập...</div>;
     if (error) return <div>Lỗi khi tải bài tập: {error}</div>;
     if (!problem) return <div>Không tìm thấy bài tập!</div>;
 
-    
+    //Thêm hàm polling trạng thái submission:
+    const startPollingSubmissionStatus = (submissionId) => {
+        const intervalId = setInterval(async () => {
+            try {
+                const userAuthToken = localStorage.getItem('token');
+                const res = await fetch(`http://localhost:5000/api/submissions/${submissionId}/status`, {
+                    headers: { Authorization: `Bearer ${userAuthToken}` }
+                });
+                if (!res.ok) throw new Error('Lỗi lấy trạng thái bài nộp');
+                const data = await res.json();
+                // Giả sử data có cấu trúc { status: 'Accepted', testResults: [...] }
+
+                // Cập nhật lại subHistory:
+                setSubHistory(prev => prev.map(sub => {
+                    if (sub.submissionId === submissionId) {
+                        return {
+                            ...sub,
+                            overallStatus: data.status,
+                            message: data.message || '',
+                            testResults: data.testResults || []
+                        };
+                    }
+                    return sub;
+                }));
+
+                // Nếu trạng thái đã không còn là Pending nữa thì dừng polling:
+                if (data.status !== 'Pending') {
+                    clearInterval(intervalId);
+                }
+            } catch (err) {
+                console.error('Lỗi khi polling trạng thái submission:', err);
+                clearInterval(intervalId);
+            }
+        }, 3000); // polling mỗi 3 giây
+    };
+
     const handleSubmit = async () => {
         console.log("Problem ID from URL params:", problemId);
-        setSubmissionStatus('Running...');
+        setSubmissionStatus('Đang chấm điểm...');
         setTestResults([]); // Xóa kết quả cũ trước khi submit mới
 
         let userAuthToken = null;
         try {
             userAuthToken = localStorage.getItem('token'); // Key là 'token' như trong AuthContext
         } catch (e) {
-            console.error("Error accessing localStorage for auth token:", e);
-            setSubmissionStatus('Error: Could not access authentication token. Please ensure localStorage is available and not blocked.');
-            // Bạn có thể hiển thị thông báo lỗi cụ thể hơn cho người dùng
-            return; // Dừng nếu không truy cập được localStorage
+            console.error("Lỗi khi truy cập localStorage để lấy token xác thực:", e);
+            setSubmissionStatus('Lỗi: Không thể truy cập token xác thực. Vui lòng đảm bảo localStorage khả dụng và không bị chặn.');
+            return;
         }
 
-        // Kiểm tra nếu không lấy được token
         if (!userAuthToken) {
-            console.error("No auth token found in localStorage. User might not be logged in or token is missing.");
-            setSubmissionStatus('Error: Not authenticated. Please login again to submit.');
-            // Cân nhắc việc điều hướng người dùng về trang đăng nhập ở đây
-            // Ví dụ: navigate('/login'); (nếu bạn dùng react-router-dom v6)
-            return; // Dừng nếu không có token
+            console.error("Không tìm thấy token xác thực trong localStorage. Người dùng có thể chưa đăng nhập hoặc token bị thiếu.");
+            setSubmissionStatus('Lỗi: Chưa xác thực. Vui lòng đăng nhập lại để nộp bài.');
+            return;
         }
-        // In ra để debug token
-        // console.log("Auth Token being sent from localStorage:", userAuthToken);
-
 
         try {
             const response = await fetch("http://localhost:5000/api/submissions", { // URL API backend
@@ -86,38 +116,33 @@ function ProblemDetailScreen() {
                 },
                 body: JSON.stringify({
                     // Đảm bảo tên trường khớp với backend mong đợi
-                    problemId: problemId,   // Biến 'problemId' phải có giá trị
-                    language: language,     // Biến 'language' phải có giá trị
-                    sourceCode: code        // Biến 'code' phải có giá trị, backend mong đợi 'sourceCode'
+                    problemId: problem._id,   // Sử dụng problem._id
+                    language: language,       // Biến 'language' phải có giá trị
+                    source_code: code          // Biến 'code' phải có giá trị, backend mong đợi 'sourceCode'
                 }),
             });
 
-            // Xử lý response kỹ hơn
             if (!response.ok) {
-                let errorMessage = `HTTP error! Status: ${response.status}`;
-                // Cố gắng parse lỗi JSON từ backend, nếu không được thì lấy text
+                let errorMessage = `Lỗi HTTP! Trạng thái: ${response.status}`;
                 try {
                     const errorData = await response.json();
-                    errorMessage = errorData.message || JSON.stringify(errorData); // Ưu tiên message từ backend
+                    errorMessage = errorData.message || JSON.stringify(errorData);
                 } catch (jsonError) {
                     try {
-                        const textError = await response.text(); // Lấy lỗi dạng text nếu không phải JSON
+                        const textError = await response.text();
                         errorMessage = textError || errorMessage;
                     } catch (textParseError) {
                         // Giữ errorMessage gốc nếu không parse được cả text
                     }
                 }
-                throw new Error(errorMessage); // Ném lỗi để catch block bên dưới xử lý
+                throw new Error(errorMessage);
             }
 
             const result = await response.json(); // Backend trả về { message: '...', submissionId: '...' }
 
-            // Cập nhật UI dựa trên response ban đầu từ POST
-            setSubmissionStatus(result.message || 'Submission received, processing...');
-            console.log("Submission successful. Submission ID:", result.submissionId);
-            // setTestResults([]); // Giữ trống cho đến khi polling có kết quả thực sự
+            setSubmissionStatus(result.message || 'Đã nhận bài nộp, đang xử lý...');
+            console.log("Nộp bài thành công. ID bài nộp:", result.submissionId);
 
-            // Cập nhật lịch sử submit
             setSubHistory(prev => [
                 {
                     timestamp: new Date().toLocaleString(),
@@ -125,27 +150,24 @@ function ProblemDetailScreen() {
                     codeSnippet: code.substring(0, 50) + (code.length > 50 ? '...' : ''),
                     overallStatus: 'Pending', // Trạng thái ban đầu là Pending sau khi POST thành công
                     message: result.message,
-                    submissionId: result.submissionId // Lưu submissionId để có thể theo dõi/polling sau
+                    submissionId: result.submissionId
                 },
                 ...prev
             ]);
 
-            // GỢI Ý: Sau khi submit thành công, bạn nên bắt đầu quá trình polling
-            // để lấy kết quả cuối cùng của submission bằng cách sử dụng result.submissionId.
-            // Ví dụ: startPollingSubmissionStatus(result.submissionId);
-            // Hàm startPollingSubmissionStatus sẽ gọi API GET /api/submissions/:id/status định kỳ.
+            startPollingSubmissionStatus(result.submissionId);
 
         } catch (err) {
-            console.error("Submission failed in handleSubmit catch block:", err); // Dòng 89 của bạn có thể là đây
-            setSubmissionStatus('Error: ' + err.message);
-            setTestResults([]); // Đảm bảo clear kết quả nếu có lỗi
+            console.error("Nộp bài thất bại trong khối catch của handleSubmit:", err);
+            setSubmissionStatus('Lỗi: ' + err.message);
+            setTestResults([]);
             setSubHistory(prev => [
                 {
                     timestamp: new Date().toLocaleString(),
                     language,
                     codeSnippet: code.substring(0, 50) + (code.length > 50 ? '...' : ''),
                     overallStatus: 'Error',
-                    message: `Submission failed: ${err.message}`,
+                    message: `Nộp bài thất bại: ${err.message}`,
                 },
                 ...prev
             ]);
@@ -169,7 +191,6 @@ function ProblemDetailScreen() {
         };
 
         reader.readAsText(file);
-
     };
 
     const detectLanguageFromExtension = (filename) => {
@@ -183,18 +204,28 @@ function ProblemDetailScreen() {
         }
     };
 
-
     return (
         <div className="problem-detail">
             <h2>{problem.title}</h2>
-            {/* Sử dụng problem.id nếu bạn đã cấu hình backend trả về trường này */}
-            {/* Hoặc sử dụng problem._id nếu bạn dùng ID mặc định của MongoDB */}
-            <p><strong>Mã:</strong> {problem.id}</p>
-            <p><strong>Dạng bài:</strong> {problem.type}</p>
-            <p><strong>Đã giải:</strong> {problem.solvedBy}</p>
-            <p>{problem.detail}</p>
+            <p><strong>Mã bài tập:</strong> {problem._id}</p>
 
-            {/* Hiển thị test case mẫu nếu có */}
+            {/* Hiển thị số lượng người đã giải thành công bằng cách lấy .length */}
+            <p><strong>Đã giải:</strong> {problem.successfulSolverIds ? problem.successfulSolverIds.length : 0}</p>
+
+            <p><strong>Giới hạn thời gian:</strong> {problem.timeLimit / 1000} giây</p>
+            <p><strong>Giới hạn bộ nhớ:</strong> {problem.memoryLimit} MB</p>
+
+            <p><strong>Độ khó:</strong> {problem.difficulty ? problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1) : 'Chưa xác định'}</p>
+
+            {problem.tags && problem.tags.length > 0 && (
+                <p><strong>Thẻ:</strong> {problem.tags.join(', ')}</p>
+            )}
+
+            <div className="problem-statement">
+                <h3>Đề bài</h3>
+                <p>{problem.statement}</p>
+            </div>
+
             <div className="sample-test-cases" style={{ marginTop: '1rem', border: '1px solid #ccc', padding: '1rem' }}>
                 <h3>Ví dụ test case</h3>
                 {problem.testcases && problem.testcases.filter(tc => tc.isSample).map((sample, index) => (
@@ -281,17 +312,15 @@ function ProblemDetailScreen() {
                         <button
                             className="btn-submit"
                             onClick={handleSubmit}
-                            // Sửa lỗi: Dùng biến `submissionStatus` để kiểm tra điều kiện
-                            disabled={submissionStatus === 'Running...'}
+                            disabled={submissionStatus === 'Đang chấm điểm...'}
                         >
-                            {submissionStatus === 'Running...' ? 'Đang chấm điểm...' : 'Submit'}
+                            {submissionStatus === 'Đang chấm điểm...' ? 'Đang chấm điểm...' : 'Submit'}
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* Hiển thị kết quả chấm điểm chi tiết */}
-            {testResults.length > 0 && ( // Kiểm tra testResults chứ không phải testResult
+            {testResults.length > 0 && (
                 <div className="test-result" style={{ marginTop: '2rem' }}>
                     <h3>Kết quả chấm điểm: <span className={submissionStatus === 'Accepted' ? 'pass' : 'fail'}>{submissionStatus}</span></h3>
                     <table>
@@ -300,7 +329,7 @@ function ProblemDetailScreen() {
                                 <th>#</th>
                                 <th>Input</th>
                                 <th>Expected Output</th>
-                                <th>Your Output</th> 
+                                <th>Your Output</th>
                                 <th>Status</th>
                                 <th>Time (s)</th>
                                 <th>Memory (MB)</th>
@@ -309,10 +338,10 @@ function ProblemDetailScreen() {
                         <tbody>
                             {testResults.map((test, index) => (
                                 <tr key={index} className={test.passed ? 'pass' : 'fail'}>
-                                    <td>{test.testCase}</td>
+                                    <td>{index + 1}</td>
                                     <td><pre>{test.input}</pre></td>
                                     <td><pre>{test.expectedOutput}</pre></td>
-                                    <td><pre>{test.actualOutput}</pre></td> 
+                                    <td><pre>{test.actualOutput}</pre></td>
                                     <td>{test.status}</td>
                                     <td>{test.time}</td>
                                     <td>{test.memory}</td>

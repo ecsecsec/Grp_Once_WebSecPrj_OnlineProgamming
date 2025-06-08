@@ -1,141 +1,215 @@
+//backend/routes/problem.js
 const express = require('express');
 const router = express.Router();
-const Problem = require('../models/Problem');
-const authMiddleware = require('../middleware/auth');
-const { defineAbilityForUser } = require('../abilities/defineAbility');
+const Problem = require('../models/problem');
+const User = require('../models/user');
+const authenticateToken  = require('../middleware/auth');
+const checkAbility = require('../middleware/checkAbility');
+const mongoose = require('mongoose')
 
-// @route   GET /api/problem/getall
+// Helper function to handle common error responses
+function handleServerError(res, err, messagePrefix = 'Server error') {
+    console.error(`${messagePrefix}:`, err.message);
+    res.status(500).json({ message: `${messagePrefix}: ${err.message}` });
+}
+
+// GET all problems - ai cũng đọc được
 router.get('/getall', async (req, res) => {
     try {
-        const problems = await Problem.find({});
+        // Chỉ lấy các bài toán có isPublic là true
+        const problems = await Problem.find({ isPublic: true })
+            .populate('creatorId', 'username')
+            .populate('successfulSolverIds', 'username');
         res.json(problems);
     } catch (err) {
-        console.error("Lỗi khi lấy tất cả bài tập:", err.message);
-        res.status(500).json({ message: 'Lỗi máy chủ khi lấy danh sách bài tập.' });
+        handleServerError(res, err, "Error fetching public problems");
     }
 });
 
-// @route   GET /api/problem/myproblems
-router.get('/myproblems', authMiddleware, async (req, res) => {
+// ---
+// GET one problem by ID
+router.get('/:id', async (req, res) => {
     try {
-        const creatorId = req.user.id;
-        const ability = defineAbilityForUser(req.user);
+        const problem = await Problem.findById(req.params.id)
+            .populate('creatorId', 'username')
+            .populate('successfulSolverIds', 'username');
 
-        if (ability.cannot('read', 'Problem')) {
-            return res.status(403).json({ message: 'Bạn không có quyền xem các bài tập này.' });
+        if (!problem) {
+            return res.status(404).json({ message: 'Bài tập không tìm thấy.' });
         }
 
-        const problems = await Problem.find({ creatorId });
-        res.json(problems);
+        // Nếu bài toán không public và người dùng không phải là người tạo hoặc admin, không cho phép truy cập
+        if (!problem.isPublic && (!req.user || (req.user.role !== 'admin' && problem.creatorId.toString() !== req.user.id))) {
+             return res.status(403).json({ message: 'Bạn không có quyền truy cập bài tập này.' });
+        }
+
+        res.json(problem);
     } catch (err) {
-        console.error("Lỗi khi lấy bài tập của creator:", err.message);
-        res.status(500).json({ message: 'Lỗi máy chủ khi lấy bài tập của creator.' });
+        if (err.kind === 'ObjectId') {
+            return res.status(400).json({ message: 'ID bài tập không hợp lệ.' });
+        }
+        handleServerError(res, err, "Error fetching problem by ID");
     }
 });
 
-// @route   POST /api/problem/create
-router.post('/create', authMiddleware, async (req, res) => {
+// ---
+// GET problems by creatorId – yêu cầu đăng nhập & quyền đọc Problem
+// Endpoint này sẽ hiển thị tất cả các bài của một creator, bao gồm cả bài private của họ
+router.get('/byCreator/:creatorId', authenticateToken, checkAbility('read', 'Problem'), async (req, res) => {
     try {
-        const { id, title, statement, type, solvedBy, testcases, timeLimit, memoryLimit } = req.body;
-        const creatorId = req.user.id;
+        const { creatorId } = req.params;
 
-        const ability = defineAbilityForUser(req.user);
-        if (ability.cannot('create', 'Problem')) {
-            return res.status(403).json({ message: 'Bạn không có quyền tạo bài tập.' });
+        // Xác thực creatorId có phải là ObjectId hợp lệ không
+        if (!mongoose.Types.ObjectId.isValid(creatorId)) {
+            return res.status(400).json({ message: 'ID người tạo không hợp lệ.' });
         }
 
+        // Chỉ admin hoặc chính creator mới xem được tất cả bài của creator đó
+        if (req.user.role !== 'admin' && req.user.id !== creatorId) {
+            return res.status(403).json({ message: 'Bạn không có quyền xem bài tập của người tạo này.' });
+        }
+
+        const problems = await Problem.find({ creatorId })
+            .populate('creatorId', 'username')
+            .populate('successfulSolverIds', 'username');
+
+        res.json(problems);
+    } catch (err) {
+        handleServerError(res, err, "Error fetching problems by creator");
+    }
+});
+
+// ---
+// POST create problem – creator & admin
+router.post('/create', authenticateToken, checkAbility('create', 'Problem'), async (req, res) => {
+    // Đảm bảo các trường này khớp với schema Problem.js
+    const { title, statement, testcases, timeLimit, memoryLimit, difficulty, tags, isPublic } = req.body;
+    const creatorId = req.user.id; // Lấy ID người tạo từ token đã xác thực
+
+    // Kiểm tra các trường bắt buộc
+    if (!title || !statement || !timeLimit || !memoryLimit || !testcases || !testcases.length) {
+        return res.status(400).json({ message: 'Thiếu trường bắt buộc: title, statement, timeLimit, memoryLimit, và ít nhất một testcase.' });
+    }
+
+    // Kiểm tra từng testcase có expectedOutput
+    for (const tc of testcases) {
+        if (tc.expectedOutput === undefined || tc.expectedOutput === null) {
+            return res.status(400).json({ message: 'Mỗi testcase phải có Expected Output.' });
+        }
+    }
+
+    // Đảm bảo difficulty là một trong các giá trị 'easy', 'medium', 'hard'
+    if (difficulty && !['easy', 'medium', 'hard'].includes(difficulty)) {
+        return res.status(400).json({ message: 'Mức độ khó không hợp lệ. Phải là "easy", "medium" hoặc "hard".' });
+    }
+
+    try {
         const newProblem = new Problem({
-            id,
             title,
-            type,
-            statement: statement,
-            solvedBy: solvedBy || 0,
+            statement,
             creatorId,
             testcases,
             timeLimit,
-            memoryLimit
+            memoryLimit,
+            difficulty: difficulty || 'medium', // Đặt default nếu không được cung cấp
+            tags: tags || [], // Đặt default là mảng rỗng nếu không được cung cấp
+            isPublic: isPublic !== undefined ? isPublic : true, // Đặt default là true nếu không được cung cấp
         });
 
-        const problem = await newProblem.save();
-        res.status(201).json(problem);
+        const savedProblem = await newProblem.save();
+        res.status(201).json(savedProblem);
     } catch (err) {
-        console.error("Lỗi khi tạo bài tập:", err);
-        if (err.name === 'ValidationError') {
-            const errors = Object.values(err.errors).map(el => el.message);
-            return res.status(400).json({ message: errors.join(', ') });
+        // Xử lý lỗi trùng lặp title nếu bạn đặt title là unique trong schema
+        if (err.code === 11000 && err.keyPattern && err.keyPattern.title) {
+            return res.status(409).json({ message: 'Tên bài tập này đã tồn tại. Vui lòng chọn tên khác.' });
         }
-        if (err.code === 11000) {
-            return res.status(409).json({ message: 'Mã bài tập (ID) đã tồn tại. Vui lòng chọn ID khác.' });
-        }
-        res.status(500).json({ message: 'Lỗi máy chủ khi tạo bài tập.' });
+        handleServerError(res, err, "Error creating problem");
     }
 });
 
-// @route   GET /api/problem/:id
-router.get('/:id', async (req, res) => {
-    try {
-        const problem = await Problem.findOne({ id: req.params.id });
-        if (!problem) {
-            return res.status(404).json({ message: 'Không tìm thấy bài tập.' });
-        }
-        res.json(problem);
-    } catch (err) {
-        console.error("Lỗi khi lấy bài tập theo ID:", err.message);
-        res.status(500).json({ message: 'Lỗi máy chủ khi lấy bài tập.' });
-    }
-});
+// ---
+// PUT update problem – chỉ creator của bài hoặc admin
+router.put('/:id', authenticateToken, checkAbility('update', 'Problem'), async (req, res) => {
+    // Không cần lấy image nếu bạn không có trường đó trong model Problem.js
+    const { title, statement, testcases, timeLimit, memoryLimit, difficulty, tags, isPublic } = req.body;
 
-// @route   PUT /api/problem/:id
-router.put('/:id', authMiddleware, async (req, res) => {
     try {
-        const { title, detail, type, testcases, timeLimit, memoryLimit } = req.body;
-        const problemId = req.params.id;
+        const problem = await Problem.findById(req.params.id);
 
-        const problem = await Problem.findOne({ id: problemId });
         if (!problem) {
-            return res.status(404).json({ message: 'Không tìm thấy bài tập để cập nhật.' });
+            return res.status(404).json({ message: 'Bài tập không tìm thấy.' });
         }
 
-        const ability = defineAbilityForUser(req.user);
-        if (ability.cannot('update', problem)) {
+        // Kiểm tra quyền: chỉ creator hoặc admin mới có thể cập nhật
+        if (req.user.role !== 'admin' && problem.creatorId.toString() !== req.user.id) {
             return res.status(403).json({ message: 'Bạn không có quyền cập nhật bài tập này.' });
         }
 
-        if (title !== undefined) problem.title = title;
-        if (detail !== undefined) problem.detail = detail;
-        if (type !== undefined) problem.type = type;
-        if (testcases !== undefined) problem.testcases = testcases;
-        if (timeLimit !== undefined) problem.timeLimit = timeLimit;
-        if (memoryLimit !== undefined) problem.memoryLimit = memoryLimit;
+        // Cập nhật các trường, chỉ cập nhật những trường được gửi lên trong request body
+        if (title) problem.title = title;
+        if (statement) problem.statement = statement;
+        if (testcases) {
+            // Validate testcases if they are being updated
+            if (!testcases.length) {
+                return res.status(400).json({ message: 'Cập nhật testcase phải có ít nhất một testcase.' });
+            }
+            for (const tc of testcases) {
+                if (tc.expectedOutput === undefined || tc.expectedOutput === null) {
+                    return res.status(400).json({ message: 'Mỗi testcase cập nhật phải có Expected Output.' });
+                }
+            }
+            problem.testcases = testcases;
+        }
+        if (timeLimit) problem.timeLimit = timeLimit;
+        if (memoryLimit) problem.memoryLimit = memoryLimit;
+        if (difficulty) {
+            if (!['easy', 'medium', 'hard'].includes(difficulty)) {
+                return res.status(400).json({ message: 'Mức độ khó không hợp lệ. Phải là "easy", "medium" hoặc "hard".' });
+            }
+            problem.difficulty = difficulty;
+        }
+        // Cho phép tags là mảng rỗng nếu muốn xóa hết tags
+        if (tags !== undefined) problem.tags = tags;
+        // Cho phép isPublic là false
+        if (isPublic !== undefined) problem.isPublic = isPublic;
 
-        await problem.save();
-        res.json({ message: 'Bài tập đã được cập nhật.', problem });
+
+        const updatedProblem = await problem.save();
+        res.json(updatedProblem);
     } catch (err) {
-        console.error("Lỗi khi cập nhật bài tập:", err.message);
-        res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật bài tập.' });
+        if (err.kind === 'ObjectId') {
+            return res.status(400).json({ message: 'ID bài tập không hợp lệ.' });
+        }
+        // Xử lý lỗi trùng lặp title nếu bạn đặt title là unique trong schema
+        if (err.code === 11000 && err.keyPattern && err.keyPattern.title) {
+            return res.status(409).json({ message: 'Tên bài tập này đã tồn tại. Vui lòng chọn tên khác.' });
+        }
+        handleServerError(res, err, "Error updating problem");
     }
 });
 
-// @route   DELETE /api/problem/:id
-router.delete('/:id', authMiddleware, async (req, res) => {
+// ---
+// DELETE problem – chỉ creator của bài hoặc admin
+router.delete('/:id', authenticateToken, checkAbility('delete', 'Problem'), async (req, res) => {
     try {
-        const problemId = req.params.id;
+        const problem = await Problem.findById(req.params.id);
 
-        const problem = await Problem.findOne({ id: problemId });
         if (!problem) {
-            return res.status(404).json({ message: 'Không tìm thấy bài tập để xóa.' });
+            return res.status(404).json({ message: 'Bài tập không tìm thấy.' });
         }
 
-        const ability = defineAbilityForUser(req.user);
-        if (ability.cannot('delete', problem)) {
+        // Kiểm tra quyền: chỉ creator hoặc admin mới có thể xóa
+        if (req.user.role !== 'admin' && problem.creatorId.toString() !== req.user.id) {
             return res.status(403).json({ message: 'Bạn không có quyền xóa bài tập này.' });
         }
 
-        await Problem.deleteOne({ id: problemId });
+        await Problem.deleteOne({ _id: req.params.id });
         res.json({ message: 'Bài tập đã được xóa thành công.' });
     } catch (err) {
-        console.error("Lỗi khi xóa bài tập:", err.message);
-        res.status(500).json({ message: 'Lỗi máy chủ khi xóa bài tập.' });
+        if (err.kind === 'ObjectId') {
+            return res.status(400).json({ message: 'ID bài tập không hợp lệ.' });
+        }
+        handleServerError(res, err, "Error deleting problem");
     }
 });
 

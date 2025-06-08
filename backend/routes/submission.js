@@ -13,7 +13,7 @@ router.post('/', authMiddleware, // Middleware xác thực vẫn giữ nguyên
     [ // Mảng các middleware validation
         body('problemId', 'Problem ID is required').not().isEmpty().trim().isMongoId(), // Kiểm tra là MongoId hợp lệ
         body('language', 'Language is required').not().isEmpty().trim().isIn(['python', 'c_cpp', 'java']), // Chỉ cho phép các ngôn ngữ hỗ trợ
-        body('sourceCode', 'Source code is required').not().isEmpty() // Không trim() source code
+        body('source_code', 'Source code is required').not().isEmpty() // Không trim() source code
     ],
     async (req, res) => {
         const errors = validationResult(req);
@@ -22,7 +22,7 @@ router.post('/', authMiddleware, // Middleware xác thực vẫn giữ nguyên
         }
 
         // Nếu không có lỗi validation, tiếp tục logic nộp bài của bạn
-        const { problemId, language, sourceCode } = req.body;
+        const { problemId, language, source_code } = req.body;
         const userId = req.user.id; // Hoặc req.user._id tùy theo token của bạn
 
         // if (!mongoose.Types.ObjectId.isValid(problemId)) { // Không cần nữa vì isMongoId() đã kiểm tra
@@ -30,7 +30,7 @@ router.post('/', authMiddleware, // Middleware xác thực vẫn giữ nguyên
         // }
 
         try {
-            const submission = await createSubmission({ userId, problemId, language, sourceCode });
+            const submission = await createSubmission({ userId, problemId, language, source_code });
             res.status(201).json({
                 message: 'Submission received and is being processed.',
                 submissionId: submission._id,
