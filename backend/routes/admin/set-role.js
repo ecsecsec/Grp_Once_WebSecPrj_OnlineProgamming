@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../../models/user'); // Đường dẫn đúng đến model User
+const User = require('../../models/User'); // Đường dẫn đúng đến model User
 const checkAbility = require('../../middleware/checkAbility');
 const protect = require('../../middleware/protect');
 

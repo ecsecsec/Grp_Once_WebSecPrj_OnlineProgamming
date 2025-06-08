@@ -12,7 +12,7 @@ function ProblemCreateScreen() {
         id: '', // Đây là trường 'id' tùy chỉnh của bạn
         title: '',
         type: '',
-        detail: '',
+        statement: '',
         solvedBy: 0,
         creatorId: '', // Sẽ được điền từ user.id của AuthContext
         testcases: [
@@ -161,7 +161,7 @@ function ProblemCreateScreen() {
                 <input name="type" value={formData.type} onChange={handleChange} required />
 
                 <label>Mô tả chi tiết</label>
-                <textarea name="detail" value={formData.detail} onChange={handleChange} />
+                <textarea name="statement" value={formData.statement} onChange={handleChange} required/>
 
                 <label>Giới hạn thời gian (ms)</label>
                 <input

@@ -49,44 +49,94 @@ function ProblemDetailScreen() {
     if (error) return <div>Lỗi khi tải bài tập: {error}</div>;
     if (!problem) return <div>Không tìm thấy bài tập!</div>;
 
-
+    
     const handleSubmit = async () => {
+        console.log("Problem ID from URL params:", problemId);
         setSubmissionStatus('Running...');
         setTestResults([]); // Xóa kết quả cũ trước khi submit mới
 
+        let userAuthToken = null;
         try {
-            const response = await fetch("http://localhost:5000/api/submissions", {
+            userAuthToken = localStorage.getItem('token'); // Key là 'token' như trong AuthContext
+        } catch (e) {
+            console.error("Error accessing localStorage for auth token:", e);
+            setSubmissionStatus('Error: Could not access authentication token. Please ensure localStorage is available and not blocked.');
+            // Bạn có thể hiển thị thông báo lỗi cụ thể hơn cho người dùng
+            return; // Dừng nếu không truy cập được localStorage
+        }
+
+        // Kiểm tra nếu không lấy được token
+        if (!userAuthToken) {
+            console.error("No auth token found in localStorage. User might not be logged in or token is missing.");
+            setSubmissionStatus('Error: Not authenticated. Please login again to submit.');
+            // Cân nhắc việc điều hướng người dùng về trang đăng nhập ở đây
+            // Ví dụ: navigate('/login'); (nếu bạn dùng react-router-dom v6)
+            return; // Dừng nếu không có token
+        }
+        // In ra để debug token
+        // console.log("Auth Token being sent from localStorage:", userAuthToken);
+
+
+        try {
+            const response = await fetch("http://localhost:5000/api/submissions", { // URL API backend
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${userAuthToken}`
                 },
-                body: JSON.stringify({ code, language, problemId }),
+                body: JSON.stringify({
+                    // Đảm bảo tên trường khớp với backend mong đợi
+                    problemId: problemId,   // Biến 'problemId' phải có giá trị
+                    language: language,     // Biến 'language' phải có giá trị
+                    sourceCode: code        // Biến 'code' phải có giá trị, backend mong đợi 'sourceCode'
+                }),
             });
 
-            const result = await response.json();
+            // Xử lý response kỹ hơn
+            if (!response.ok) {
+                let errorMessage = `HTTP error! Status: ${response.status}`;
+                // Cố gắng parse lỗi JSON từ backend, nếu không được thì lấy text
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || JSON.stringify(errorData); // Ưu tiên message từ backend
+                } catch (jsonError) {
+                    try {
+                        const textError = await response.text(); // Lấy lỗi dạng text nếu không phải JSON
+                        errorMessage = textError || errorMessage;
+                    } catch (textParseError) {
+                        // Giữ errorMessage gốc nếu không parse được cả text
+                    }
+                }
+                throw new Error(errorMessage); // Ném lỗi để catch block bên dưới xử lý
+            }
 
-            setSubmissionStatus(result.overallStatus); // Cập nhật trạng thái tổng thể
-            setTestResults(result.testResults || []); // Cập nhật kết quả chi tiết từng test case
+            const result = await response.json(); // Backend trả về { message: '...', submissionId: '...' }
 
-            // Xóa các alert không cần thiết, thông tin đã hiển thị trong bảng testResults
-            // if (result.output) alert("Output:\n" + result.output);
-            // else alert("Lỗi:\n" + result.error);
+            // Cập nhật UI dựa trên response ban đầu từ POST
+            setSubmissionStatus(result.message || 'Submission received, processing...');
+            console.log("Submission successful. Submission ID:", result.submissionId);
+            // setTestResults([]); // Giữ trống cho đến khi polling có kết quả thực sự
 
-
+            // Cập nhật lịch sử submit
             setSubHistory(prev => [
                 {
                     timestamp: new Date().toLocaleString(),
                     language,
                     codeSnippet: code.substring(0, 50) + (code.length > 50 ? '...' : ''),
-                    overallStatus: result.overallStatus,
+                    overallStatus: 'Pending', // Trạng thái ban đầu là Pending sau khi POST thành công
                     message: result.message,
-                    // Nếu bạn muốn lưu trữ testResults chi tiết trong lịch sử, hãy thêm vào đây
-                    // testResults: result.testResults,
+                    submissionId: result.submissionId // Lưu submissionId để có thể theo dõi/polling sau
                 },
                 ...prev
             ]);
+
+            // GỢI Ý: Sau khi submit thành công, bạn nên bắt đầu quá trình polling
+            // để lấy kết quả cuối cùng của submission bằng cách sử dụng result.submissionId.
+            // Ví dụ: startPollingSubmissionStatus(result.submissionId);
+            // Hàm startPollingSubmissionStatus sẽ gọi API GET /api/submissions/:id/status định kỳ.
+
         } catch (err) {
-            console.error("Submission failed:", err);
+            console.error("Submission failed in handleSubmit catch block:", err); // Dòng 89 của bạn có thể là đây
             setSubmissionStatus('Error: ' + err.message);
             setTestResults([]); // Đảm bảo clear kết quả nếu có lỗi
             setSubHistory(prev => [
@@ -95,7 +145,7 @@ function ProblemDetailScreen() {
                     language,
                     codeSnippet: code.substring(0, 50) + (code.length > 50 ? '...' : ''),
                     overallStatus: 'Error',
-                    message: `Lỗi kết nối hoặc xử lý: ${err.message}`,
+                    message: `Submission failed: ${err.message}`,
                 },
                 ...prev
             ]);

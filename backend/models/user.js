@@ -1,6 +1,6 @@
 // backend/models/user.js
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs'); // <--- Đảm bảo có dòng này!
+const bcrypt = require('bcryptjs'); 
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
@@ -10,7 +10,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'admin', 'creator'],
     default: 'user'
-  }
+  },
+  solved_problem_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Problem' }]
 }, { timestamps: true });
 
 // Middleware để mã hóa mật khẩu trước khi lưu

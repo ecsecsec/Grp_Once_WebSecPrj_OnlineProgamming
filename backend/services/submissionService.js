@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 //const Submission = require('../models/Submission');
 const Problem = require('../models/Problem');
-const User = require('../models/user');
+const User = require('../models/User');
 const runInDocker = require('../utils/runInDocker');
 
 function normalizeOutput(output) {

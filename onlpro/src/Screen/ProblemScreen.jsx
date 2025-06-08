@@ -20,6 +20,7 @@ function ProblemScreen() {
                 }
                 const data = await res.json();
                 setProblems(data);
+                console.log("Dữ liệu problems từ API:", JSON.stringify(data, null, 2));
             } catch (err) {
                 setError(err.message);
             } finally {

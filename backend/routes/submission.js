@@ -1,45 +1,50 @@
 // backend/routes/submissionRoutes.js
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const router = express.Router();
-const authMiddleware = require('../middleware/auth'); // <--- SỬA Ở ĐÂY
+const authMiddleware = require('../middleware/auth'); 
 const { createSubmission } = require('../services/submissionService');
 const Submission = require('../models/Submission');
 const mongoose = require('mongoose'); 
 
 // POST /api/submissions - Tạo submission mới
 // Sử dụng authMiddleware đã import
-router.post('/', authMiddleware, async (req, res) => {
-    const { problemId, language, sourceCode } = req.body;
-
-    // Lấy userId từ req.user được gán bởi authMiddleware
-    // Kiểm tra xem req.user và req.user.id có tồn tại không
-    if (!req.user || !req.user.id) { // <--- SỬA Ở ĐÂY: req.user.id (hoặc req.user._id tùy theo payload token)
-        console.error('User ID not found in token payload after auth middleware');
-        return res.status(401).json({ message: 'User information not found in token.' });
-    }
-    const userId = req.user.id; // <--- SỬA Ở ĐÂY
-
-    if (!problemId || !language || !sourceCode) {
-        return res.status(400).json({ message: 'Missing problemId, language, or sourceCode' });
-    }
-    if (!mongoose.Types.ObjectId.isValid(problemId)) {
-        return res.status(400).json({ message: 'Invalid problemId format' });
-    }
-
-    try {
-        const submission = await createSubmission({ userId, problemId, language, sourceCode });
-        res.status(201).json({
-            message: 'Submission received and is being processed.',
-            submissionId: submission._id,
-        });
-    } catch (error) {
-        console.error('Error creating submission route:', error);
-        if (error.message.includes('Problem not found') || error.message.includes('Language not supported')) {
-            return res.status(400).json({ message: error.message });
+router.post('/', authMiddleware, // Middleware xác thực vẫn giữ nguyên
+    [ // Mảng các middleware validation
+        body('problemId', 'Problem ID is required').not().isEmpty().trim().isMongoId(), // Kiểm tra là MongoId hợp lệ
+        body('language', 'Language is required').not().isEmpty().trim().isIn(['python', 'c_cpp', 'java']), // Chỉ cho phép các ngôn ngữ hỗ trợ
+        body('sourceCode', 'Source code is required').not().isEmpty() // Không trim() source code
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
         }
-        res.status(500).json({ message: 'Server error while creating submission.' });
+
+        // Nếu không có lỗi validation, tiếp tục logic nộp bài của bạn
+        const { problemId, language, sourceCode } = req.body;
+        const userId = req.user.id; // Hoặc req.user._id tùy theo token của bạn
+
+        // if (!mongoose.Types.ObjectId.isValid(problemId)) { // Không cần nữa vì isMongoId() đã kiểm tra
+        //    return res.status(400).json({ message: 'Invalid problemId format' });
+        // }
+
+        try {
+            const submission = await createSubmission({ userId, problemId, language, sourceCode });
+            res.status(201).json({
+                message: 'Submission received and is being processed.',
+                submissionId: submission._id,
+            });
+        } catch (error) {
+            // ... (xử lý lỗi của bạn như cũ)
+            console.error('Error creating submission route:', error);
+            if (error.message.includes('Problem not found') || error.message.includes('Language not supported')) {
+                return res.status(400).json({ message: error.message });
+            }
+            res.status(500).json({ message: 'Server error while creating submission.' });
+        }
     }
-});
+);
 
 // GET /api/submissions/:id/status - Lấy trạng thái của một submission
 // Sử dụng authMiddleware đã import

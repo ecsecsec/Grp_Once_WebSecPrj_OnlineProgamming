@@ -1,7 +1,8 @@
 // backend/routes/auth.js
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const router = express.Router();
-const User = require('../models/user');
+const User = require('../models/User');
 const jwt = require('jsonwebtoken'); // Không cần bcrypt ở đây nếu chỉ dùng cho token
 const bcrypt = require('bcryptjs');
 const authMiddleware = require('../middleware/auth');

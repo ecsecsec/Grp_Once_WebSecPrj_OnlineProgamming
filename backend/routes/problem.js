@@ -36,7 +36,7 @@ router.get('/myproblems', authMiddleware, async (req, res) => {
 // @route   POST /api/problem/create
 router.post('/create', authMiddleware, async (req, res) => {
     try {
-        const { id, title, detail, type, solvedBy, testcases, timeLimit, memoryLimit } = req.body;
+        const { id, title, statement, type, solvedBy, testcases, timeLimit, memoryLimit } = req.body;
         const creatorId = req.user.id;
 
         const ability = defineAbilityForUser(req.user);
@@ -48,7 +48,7 @@ router.post('/create', authMiddleware, async (req, res) => {
             id,
             title,
             type,
-            detail,
+            statement: statement,
             solvedBy: solvedBy || 0,
             creatorId,
             testcases,
